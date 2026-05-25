@@ -26,6 +26,7 @@ import { toast } from "@/components/ui/use-toast";
 import {
   ChevronLeft,
   Download,
+  ExternalLink,
   FileCheck2,
   FileText,
   Loader2,
@@ -41,6 +42,7 @@ import {
   usePreviewDocument,
 } from "@/hooks/documents/use-documents";
 import { useCurrentUser } from "@/hooks/auth/use-auth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { PdfViewer } from "@/components/preview/pdf-viewer";
 import { useWizard } from "./wizard-context";
 import { ActiveTemplateBadge } from "./active-template-badge";
@@ -399,6 +401,13 @@ function PreviewPane({
   format: "pdf" | "docx" | null;
   onDownloadDocx: () => void;
 }) {
+  // Mobile browsers (iOS Safari, Chrome Android) don't render PDFs
+  // inside iframes — the embedded `application/pdf` doesn't trigger
+  // their native viewer, so the iframe shows blank or tries to
+  // download the file. We swap the inline viewer for an "open in new
+  // tab" CTA on mobile, where the OS viewer takes over.
+  const isMobile = useIsMobile();
+
   if (loading) {
     return (
       <div className="flex h-[640px] items-center justify-center rounded-md border bg-muted/30 text-sm text-muted-foreground">
@@ -443,6 +452,41 @@ function PreviewPane({
     );
   }
 
+  // Mobile: open the blob URL in a new tab so the device's native PDF
+  // viewer (iOS Files / Android PDF viewer) renders it. Embedding
+  // inline doesn't work — WebKit/Blink mobile don't honor PDF iframes.
+  if (isMobile) {
+    return (
+      <div className="rounded-md border bg-card p-6 text-sm space-y-4">
+        <div className="flex items-start gap-3">
+          <FileText className="mt-0.5 h-5 w-5 text-primary" />
+          <div className="space-y-1">
+            <p className="font-medium">Vista previa lista</p>
+            <p className="text-muted-foreground">
+              Los navegadores móviles no muestran PDFs embebidos. Tocá
+              para abrirlo en una pestaña nueva con el visor de tu
+              dispositivo.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button asChild className="flex-1">
+            <a href={url} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="mr-1 h-4 w-4" />
+              Abrir vista previa
+            </a>
+          </Button>
+          <Button onClick={onDownloadDocx} variant="outline" className="flex-1">
+            <Download className="mr-1 h-4 w-4" />
+            Descargar .docx
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop: inline iframe (Chrome / Firefox / Edge have built-in
+  // PDF viewers that handle blob: URLs without trouble).
   return (
     <div className="relative">
       {refreshing && (
@@ -457,6 +501,14 @@ function PreviewPane({
         className="w-full rounded-md border"
         style={{ minHeight: 720, border: 0 }}
       />
+      <div className="mt-2 flex justify-end">
+        <Button asChild variant="ghost" size="sm">
+          <a href={url} target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="mr-1 h-3.5 w-3.5" />
+            Abrir en pestaña nueva
+          </a>
+        </Button>
+      </div>
     </div>
   );
 }
