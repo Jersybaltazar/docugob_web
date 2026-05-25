@@ -56,7 +56,11 @@ function buildCsp(nonce: string): string {
     `img-src 'self' blob: data:`,
     `font-src 'self' data:`,
     `connect-src 'self' ${CSP_CONNECT_EXTRA}`,
-    `frame-src ${CSP_FRAME_EXTRA}`,
+    // `blob:` is required so the wizard step-4 PdfViewer can show the
+    // dry-run preview PDF in an <iframe src="blob:..."> — the bytes
+    // come from /api/documents/{id}/preview and never leave the page.
+    // `'self'` allows any future same-origin iframe (currently none).
+    `frame-src 'self' blob: ${CSP_FRAME_EXTRA}`,
     `object-src 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,
