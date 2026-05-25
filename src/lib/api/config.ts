@@ -1,14 +1,14 @@
 /**
  * DocuGob — API client configuration.
  *
- * Single source of truth for the FastAPI base URL. We read it from
- * `NEXT_PUBLIC_API_BASE_URL` so the same build works in dev, staging
- * and production by swapping the env var.
+ * Sprint C — the browser only talks to `/api/*` on the same origin.
+ * Our Next.js route handlers proxy to FastAPI server-side, injecting
+ * the access token from HttpOnly cookies.
+ *
+ * No env variable is required here anymore — the upstream URL lives in
+ * `lib/server/fastapi.ts` and is server-only.
  */
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
-
-export const API_V1 = `${API_BASE_URL}/api/v1`;
+export const API_V1 = "/api";
 
 export const DEBUG_API = process.env.NEXT_PUBLIC_DEBUG_API === "true";

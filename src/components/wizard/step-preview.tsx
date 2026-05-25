@@ -3,42 +3,52 @@
 /**
  * DocuGob — Wizard Step 4: Faithful preview + Generate + Download.
  *
- * Pre-generation: shows a Word-like HTML approximation via
- * `<DocumentPreview />`. Post-generation: swaps to the inline PDF
- * (`<PdfViewer />`) when the backend converted the .docx via
- * LibreOffice; otherwise it keeps the HTML preview alongside a clear
- * note that PDF conversion is unavailable.
+ * Sprint 8 — Vista previa fiel (Opción B). The preview pane renders
+ * the actual PDF produced by the backend's dry-run pipeline, so the
+ * user sees their letterhead, footer and AI-generated body exactly as
+ * they will appear after "Generar". The dry-run does NOT consume a
+ * correlative — that's reserved for the explicit Generate action.
  *
- * The "Generar" button is a one-shot — once the document moves to
- * `generated` status, the action row reveals the download options.
+ * Lifecycle:
+ *   - Auto-fetch the preview on first mount (when documentId exists).
+ *   - "Actualizar vista previa" button re-renders on demand (so
+ *     users editing in step 2/3 and coming back see fresh state).
+ *   - Generate is unchanged — same correlative-allocating endpoint.
+ *
+ * Fallback: if LibreOffice isn't available, the backend returns the
+ * .docx blob with `X-Preview-Format: docx`. We surface a download CTA
+ * instead of an iframe.
  */
 
 import Link from "next/link";
-import { useState } from "react";
-import { toast } from "sonner";
+import { useCallback, useEffect, useState } from "react";
+import { toast } from "@/components/ui/use-toast";
 import {
   ChevronLeft,
   Download,
   FileCheck2,
   FileText,
   Loader2,
+  RefreshCw,
   RotateCcw,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { documentsApi } from "@/lib/api/documents";
 import { ApiError } from "@/lib/api/client";
-import { useGenerateDocument } from "@/hooks/use-documents";
-import { useCurrentUser } from "@/hooks/use-auth";
-import { DocumentPreview } from "@/components/preview/document-preview";
+import {
+  useGenerateDocument,
+  usePreviewDocument,
+} from "@/hooks/documents/use-documents";
+import { useCurrentUser } from "@/hooks/auth/use-auth";
 import { PdfViewer } from "@/components/preview/pdf-viewer";
 import { useWizard } from "./wizard-context";
+import { ActiveTemplateBadge } from "./active-template-badge";
 
 export function StepPreview() {
   const {
     documentId,
     documentType,
-    title,
     contentData,
     aiGeneratedBody,
     document: storedDoc,
@@ -51,6 +61,15 @@ export function StepPreview() {
   const [downloading, setDownloading] = useState<"docx" | "pdf" | null>(null);
 
   const generate = useGenerateDocument(documentId ?? "");
+  const preview = usePreviewDocument(documentId ?? "");
+
+  // Preview blob — survives across refresh button clicks. Revoke
+  // object URLs on replacement and on unmount so we don't leak.
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewFormat, setPreviewFormat] = useState<"pdf" | "docx" | null>(
+    null
+  );
+
   const isGenerated =
     storedDoc?.status === "generated" ||
     storedDoc?.status === "reviewed" ||
@@ -59,9 +78,67 @@ export function StepPreview() {
   const isFreePlan =
     (user?.current_tenant?.plan ?? "").toLowerCase() === "free";
 
+  const refreshPreview = useCallback(() => {
+    if (!documentId || isGenerated) return;
+    preview.mutate(
+      {
+        content_data: contentData,
+        ai_generated_body: aiGeneratedBody || undefined,
+      },
+      {
+        onSuccess: ({ blob, format }) => {
+          setPreviewUrl((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return URL.createObjectURL(blob);
+          });
+          setPreviewFormat(format);
+        },
+        onError: (err) => {
+          const message =
+            err instanceof Error
+              ? err.message
+              : "No se pudo generar la vista previa";
+          toast({
+            title: "Error",
+            description: message,
+            variant: "destructive",
+          });
+        },
+      }
+    );
+  }, [documentId, isGenerated, contentData, aiGeneratedBody, preview]);
+
+  // Auto-fetch the preview the first time we have a documentId.
+  // Adjust-state-during-render with `queueMicrotask` so the mutation
+  // fires after this render commits — keeps us out of the
+  // `react-hooks/set-state-in-effect` rule and `react-hooks/refs`
+  // (no ref mutation during render).
+  const [autoTriggeredFor, setAutoTriggeredFor] = useState<string | null>(
+    null
+  );
+  if (
+    documentId &&
+    !isGenerated &&
+    autoTriggeredFor !== documentId
+  ) {
+    setAutoTriggeredFor(documentId);
+    queueMicrotask(refreshPreview);
+  }
+
+  // Revoke the object URL when the component unmounts.
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
   const handleGenerate = async () => {
     if (!documentId) {
-      toast.error("Primero guarda el borrador en el paso 2");
+      toast({
+        title: "Error",
+        description: "Primero guarda el borrador en el paso 2",
+        variant: "destructive",
+      });
       return;
     }
     try {
@@ -71,11 +148,16 @@ export function StepPreview() {
         generate_pdf: true,
       });
       setDocument(doc);
-      toast.success(`Documento generado · ${doc.number ?? ""}`);
+      toast({
+        title: "Éxito",
+        description: `Documento generado · ${doc.number ?? ""}`,
+      });
     } catch (err) {
       const message =
-        err instanceof ApiError ? err.message : "No se pudo generar el documento";
-      toast.error(message);
+        err instanceof ApiError
+          ? err.message
+          : "No se pudo generar el documento";
+      toast({ title: "Error", description: message, variant: "destructive" });
     }
   };
 
@@ -96,11 +178,23 @@ export function StepPreview() {
       URL.revokeObjectURL(url);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : `No se pudo descargar el ${format_}`;
-      toast.error(message);
+        err instanceof Error
+          ? err.message
+          : `No se pudo descargar el ${format_}`;
+      toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setDownloading(null);
     }
+  };
+
+  const handleDownloadPreviewDocx = () => {
+    if (!previewUrl || previewFormat !== "docx") return;
+    const link = window.document.createElement("a");
+    link.href = previewUrl;
+    link.download = "vista-previa.docx";
+    window.document.body.appendChild(link);
+    link.click();
+    window.document.body.removeChild(link);
   };
 
   return (
@@ -112,32 +206,41 @@ export function StepPreview() {
         <p className="text-sm text-muted-foreground">
           {isGenerated
             ? "El documento ya fue generado. Puedes descargarlo en .docx o .pdf."
-            : "Revisa la vista previa fiel. Al generar, se asignará el número correlativo definitivo y se producirá el archivo Word."}
+            : "Vista previa fiel del documento real (no consume número correlativo)."}
         </p>
       </header>
+
+      {!isGenerated && (
+        <ActiveTemplateBadge
+          documentType={documentType}
+          variant="prominent"
+        />
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
         {/* Preview pane */}
         <div className="min-w-0">
-          {isGenerated && storedDoc?.file_pdf_url ? (
-            <PdfViewer
-              documentId={documentId}
-              pdfUrl={storedDoc.file_pdf_url}
-              className="rounded-md border"
-            />
+          {isGenerated ? (
+            storedDoc?.file_pdf_url ? (
+              <PdfViewer
+                documentId={documentId}
+                pdfUrl={storedDoc.file_pdf_url}
+                className="rounded-md border"
+              />
+            ) : (
+              <div className="rounded-md border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
+                La conversión a PDF no está disponible en este servidor.
+                Descarga el .docx desde el botón de la derecha — se ve
+                idéntico al PDF al abrirlo en Word.
+              </div>
+            )
           ) : (
-            <DocumentPreview
-              documentType={documentType}
-              title={title}
-              number={storedDoc?.number}
-              entityName={user?.current_tenant?.name ?? "Tu entidad"}
-              city="Huánuco"
-              content={contentData ?? {}}
-              body={
-                aiGeneratedBody ||
-                String((contentData as Record<string, unknown>)?.cuerpo ?? "")
-              }
-              watermark={isFreePlan ? "DocuGob" : ""}
+            <PreviewPane
+              loading={preview.isPending && !previewUrl}
+              refreshing={preview.isPending && Boolean(previewUrl)}
+              url={previewUrl}
+              format={previewFormat}
+              onDownloadDocx={handleDownloadPreviewDocx}
             />
           )}
         </div>
@@ -148,9 +251,24 @@ export function StepPreview() {
             <h3 className="text-sm font-medium">Acciones</h3>
             {!isGenerated ? (
               <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={refreshPreview}
+                  disabled={preview.isPending || !documentId}
+                >
+                  {preview.isPending ? (
+                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-1 h-4 w-4" />
+                  )}
+                  Actualizar vista previa
+                </Button>
+
                 <p className="text-xs text-muted-foreground">
-                  Aún no has generado el documento. Al hacerlo se asignará el
-                  número correlativo y se creará el archivo Word definitivo.
+                  Cuando estés conforme, &ldquo;Generar&rdquo; asigna el
+                  número correlativo definitivo y guarda el archivo Word.
                 </p>
                 <Button
                   type="button"
@@ -261,5 +379,84 @@ export function StepPreview() {
         </aside>
       </div>
     </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Preview pane — handles loading / pdf-iframe / docx-fallback states
+// ---------------------------------------------------------------------------
+
+function PreviewPane({
+  loading,
+  refreshing,
+  url,
+  format,
+  onDownloadDocx,
+}: {
+  loading: boolean;
+  refreshing: boolean;
+  url: string | null;
+  format: "pdf" | "docx" | null;
+  onDownloadDocx: () => void;
+}) {
+  if (loading) {
+    return (
+      <div className="flex h-[640px] items-center justify-center rounded-md border bg-muted/30 text-sm text-muted-foreground">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        Generando vista previa…
+      </div>
+    );
+  }
+
+  if (!url) {
+    return (
+      <div className="rounded-md border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
+        Aún no hay vista previa. Usa &ldquo;Actualizar vista
+        previa&rdquo; para renderizar el documento con los datos actuales.
+      </div>
+    );
+  }
+
+  if (format === "docx") {
+    // LibreOffice no estaba disponible → no podemos mostrar inline,
+    // ofrecemos la descarga del .docx como mejor alternativa.
+    return (
+      <div className="rounded-md border bg-card p-6 text-sm space-y-3">
+        <div className="flex items-start gap-3">
+          <FileText className="mt-0.5 h-5 w-5 text-primary" />
+          <div className="space-y-1">
+            <p className="font-medium">
+              Vista previa disponible como .docx
+            </p>
+            <p className="text-muted-foreground">
+              El servidor no tiene LibreOffice instalado para convertir
+              a PDF inline. Descarga el .docx para verlo en Word — es
+              idéntico al que se generará al darle &ldquo;Generar&rdquo;.
+            </p>
+          </div>
+        </div>
+        <Button onClick={onDownloadDocx} variant="outline">
+          <Download className="mr-1 h-4 w-4" />
+          Descargar vista previa (.docx)
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      {refreshing && (
+        <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-center gap-2 rounded-t-md bg-primary/10 px-3 py-1.5 text-xs text-primary">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Actualizando…
+        </div>
+      )}
+      <iframe
+        src={url}
+        title="Vista previa del documento"
+        className="w-full rounded-md border"
+        style={{ minHeight: 720, border: 0 }}
+      />
+    </div>
   );
 }

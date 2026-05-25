@@ -21,9 +21,9 @@ export type SubscribePayload = {
 
 export const billingApi = {
   plans(): Promise<PlanListResponse> {
-    // The endpoint is open; we pass skipAuth so unauthenticated visits
-    // to /pricing don't trip the JWT refresh flow.
-    return api.get<PlanListResponse>("/billing/plans", { skipAuth: true });
+    // Public endpoint — the proxy forwards without an Authorization
+    // header when no session cookie is present.
+    return api.get<PlanListResponse>("/billing/plans");
   },
 
   subscription(): Promise<SubscriptionRead | null> {

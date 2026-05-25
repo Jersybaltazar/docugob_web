@@ -86,3 +86,18 @@ export function useGenerateDocument(id: string) {
     },
   });
 }
+
+/**
+ * Dry-run preview — backend renders without assigning a correlative
+ * or persisting anything. Used by the wizard's "Vista previa fiel"
+ * step. Exposed as a mutation (not a query) because:
+ *  - It's a POST with a body that mirrors the generate flow.
+ *  - The user controls when to re-render via an explicit button.
+ *  - Caching a binary blob isn't worth the complexity.
+ */
+export function usePreviewDocument(id: string) {
+  return useMutation({
+    mutationFn: (body: GenerateDocumentBody = {}) =>
+      documentsApi.preview(id, body),
+  });
+}

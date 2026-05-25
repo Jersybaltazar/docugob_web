@@ -1,19 +1,37 @@
-import * as React from "react"
+"use client";
 
-const MOBILE_BREAKPOINT = 768
+/**
+ * DocuGob — Viewport-size detection hook.
+ *
+ * React 19 — uses `useSyncExternalStore`, the canonical pattern for
+ * subscribing to browser APIs. It eliminates the previous
+ * `set-state-in-effect` warning AND prevents tearing during
+ * concurrent renders.
+ *
+ * SSR: returns `false` (desktop) until the client mounts; the first
+ * client render then reads the actual viewport size in a single
+ * commit instead of a deferred `useEffect` flip.
+ */
 
-export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+import * as React from "react";
 
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
-    mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener("change", onChange)
-  }, [])
+const MOBILE_BREAKPOINT = 768;
+const MEDIA_QUERY = `(max-width: ${MOBILE_BREAKPOINT - 1}px)`;
 
-  return !!isMobile
+function subscribe(callback: () => void): () => void {
+  const mql = window.matchMedia(MEDIA_QUERY);
+  mql.addEventListener("change", callback);
+  return () => mql.removeEventListener("change", callback);
+}
+
+function getSnapshot(): boolean {
+  return window.matchMedia(MEDIA_QUERY).matches;
+}
+
+function getServerSnapshot(): boolean {
+  return false;
+}
+
+export function useIsMobile(): boolean {
+  return React.useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

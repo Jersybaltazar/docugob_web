@@ -30,15 +30,22 @@ export function PdfViewer({ documentId, pdfUrl, className }: Props) {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // React 19 — when the inputs change, reset loader state during
+  // render (not in an effect). The effect below then performs the
+  // async fetch in a clean slate.
+  const inputKey = `${documentId ?? ""}|${pdfUrl ?? ""}`;
+  const [lastInputKey, setLastInputKey] = useState(inputKey);
+  if (lastInputKey !== inputKey) {
+    setLastInputKey(inputKey);
+    setObjectUrl(null);
+    setError(null);
+  }
+
   useEffect(() => {
-    if (!documentId || !pdfUrl) {
-      setObjectUrl(null);
-      return;
-    }
+    if (!documentId || !pdfUrl) return;
+
     let revoked = false;
     let currentUrl: string | null = null;
-    setError(null);
-    setObjectUrl(null);
 
     (async () => {
       try {

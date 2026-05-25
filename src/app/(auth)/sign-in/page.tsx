@@ -1,45 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ApiError } from "@/lib/api/client";
-import { useLogin } from "@/hooks/use-auth";
-
-const schema = z.object({
-  email: z.string().email("Correo electrónico inválido"),
-  password: z.string().min(8, "Mínimo 8 caracteres"),
-});
-
-type FormValues = z.infer<typeof schema>;
+import { FormGenerator } from "@/components/forms/form-generator";
+import { useSignInForm } from "@/hooks/auth/use-sign-in";
+import type { SignInValues } from "@/schemas/auth.schema";
 
 export default function SignInPage() {
-  const login = useLogin();
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { email: "", password: "" },
-  });
-
-  const onSubmit = handleSubmit(async (values) => {
-    try {
-      await login.mutateAsync(values);
-      toast.success("Sesión iniciada");
-    } catch (err) {
-      const message =
-        err instanceof ApiError ? err.message : "No se pudo iniciar sesión";
-      toast.error(message);
-    }
-  });
+  const { register, errors, onHandleSubmit, loading } = useSignInForm();
 
   return (
     <div className="space-y-6">
@@ -52,52 +21,45 @@ export default function SignInPage() {
         </p>
       </div>
 
-      <form noValidate onSubmit={onSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Correo electrónico</Label>
-          <Input
-            id="email"
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            autoFocus
-            placeholder="usuario@minsa.gob.pe"
-            aria-invalid={!!errors.email}
-            {...register("email")}
-          />
-          {errors.email && (
-            <p className="text-sm text-destructive">{errors.email.message}</p>
-          )}
-        </div>
+      <form noValidate onSubmit={onHandleSubmit} className="space-y-4">
+        <FormGenerator<SignInValues>
+          inputType="input"
+          name="email"
+          label="Correo electrónico"
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          autoFocus
+          placeholder="usuario@minsa.gob.pe"
+          register={register}
+          errors={errors}
+        />
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password">Contraseña</Label>
+            <span className="sr-only" id="password-aux" />
             {/* Reset link placeholder — real flow lands in Sprint 9 */}
             <Link
               href="#"
-              className="text-xs text-muted-foreground hover:text-foreground"
+              className="ml-auto text-xs text-muted-foreground hover:text-foreground"
               tabIndex={-1}
             >
               ¿Olvidaste tu contraseña?
             </Link>
           </div>
-          <Input
-            id="password"
+          <FormGenerator<SignInValues>
+            inputType="input"
+            name="password"
+            label="Contraseña"
             type="password"
             autoComplete="current-password"
-            aria-invalid={!!errors.password}
-            {...register("password")}
+            register={register}
+            errors={errors}
           />
-          {errors.password && (
-            <p className="text-sm text-destructive">
-              {errors.password.message}
-            </p>
-          )}
         </div>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting || login.isPending}>
-          {isSubmitting || login.isPending ? "Ingresando..." : "Iniciar sesión"}
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? "Ingresando..." : "Iniciar sesión"}
         </Button>
       </form>
 

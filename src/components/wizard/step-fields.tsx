@@ -16,7 +16,7 @@ import { useEffect, useMemo } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/use-toast";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,8 +27,8 @@ import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { ArrayField } from "./array-field";
 import { DynamicField } from "./dynamic-field";
 import { useWizard } from "./wizard-context";
-import { useCreateDocument, useUpdateDocument } from "@/hooks/use-documents";
-import { useTemplateForType } from "@/hooks/use-templates";
+import { useCreateDocument, useUpdateDocument } from "@/hooks/documents/use-documents";
+import { useTemplateForType } from "@/hooks/templates/use-templates";
 import { DOCUMENT_TYPE_BY_CODE } from "@/lib/document-types";
 import { normalizeFieldsSchema, type FieldSpec } from "@/lib/form-schema";
 import { ApiError } from "@/lib/api/client";
@@ -188,7 +188,11 @@ export function StepFields() {
 
   const onSubmit = handleSubmit(async (values) => {
     if (!documentType) {
-      toast.error("Selecciona un tipo de documento primero");
+      toast({
+        title: "Error",
+        description: "Selecciona un tipo de documento primero",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -225,12 +229,15 @@ export function StepFields() {
             area_id: values.area_id || undefined,
           });
       setDocument(doc);
-      toast.success(documentId ? "Borrador actualizado" : "Borrador guardado");
+      toast({
+        title: "Éxito",
+        description: documentId ? "Borrador actualizado" : "Borrador guardado",
+      });
       next();
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "No se pudo guardar el borrador";
-      toast.error(message);
+      toast({ title: "Error", description: message, variant: "destructive" });
     }
   });
 

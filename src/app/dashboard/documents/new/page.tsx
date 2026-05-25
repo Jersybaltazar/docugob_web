@@ -34,7 +34,7 @@ export default function NewDocumentPage() {
 
 function WizardShell() {
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex items-center justify-between gap-3">
         <Button asChild variant="ghost" size="sm">
           <Link href="/dashboard/documents">
@@ -81,7 +81,7 @@ function CurrentStep() {
 
 function WizardSkeleton() {
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <div className="h-9" />
       <div className="h-12 rounded-lg bg-muted/40" />
       <div className="h-12 rounded-lg bg-muted/40" />

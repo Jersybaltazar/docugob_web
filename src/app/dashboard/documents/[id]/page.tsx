@@ -16,11 +16,10 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/use-toast";
 import {
   ArrowLeft,
   Download,
-  FileText,
   Loader2,
   Pencil,
   Trash2,
@@ -42,8 +41,8 @@ import {
 import { DocumentStatusBadge } from "@/components/documents/document-status-badge";
 import { DocumentPreview } from "@/components/preview/document-preview";
 import { PdfViewer } from "@/components/preview/pdf-viewer";
-import { useDocument, useDeleteDocument } from "@/hooks/use-documents";
-import { useCurrentUser } from "@/hooks/use-auth";
+import { useDocument, useDeleteDocument } from "@/hooks/documents/use-documents";
+import { useCurrentUser } from "@/hooks/auth/use-auth";
 import { documentsApi } from "@/lib/api/documents";
 import { ApiError } from "@/lib/api/client";
 import { DOCUMENT_TYPE_BY_CODE } from "@/lib/document-types";
@@ -80,7 +79,7 @@ export default function DocumentDetailPage({
     } catch (err) {
       const message =
         err instanceof Error ? err.message : `No se pudo descargar el ${format_}`;
-      toast.error(message);
+      toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setDownloading(null);
     }
@@ -89,12 +88,12 @@ export default function DocumentDetailPage({
   const handleDelete = async () => {
     try {
       await deleteDoc.mutateAsync(id);
-      toast.success("Documento eliminado");
+      toast({ title: "Éxito", description: "Documento eliminado" });
       router.push("/dashboard/documents");
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "No se pudo eliminar";
-      toast.error(message);
+      toast({ title: "Error", description: message, variant: "destructive" });
     }
   };
 

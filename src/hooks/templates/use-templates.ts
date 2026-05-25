@@ -32,8 +32,13 @@ export function useTemplate(id: string | null | undefined) {
 
 /**
  * Resolve the active Template that the backend would pick for a given
- * document_type (system fallback if no tenant override). The wizard uses
- * this to know which `fields_schema` to render dynamically.
+ * document_type. Mirrors the backend's resolution priority:
+ *   1. Active TENANT template       (uploaded via Settings → Mis plantillas)
+ *   2. Active SYSTEM template       (DocuGob's default)
+ *   3. Any inactive template        (last resort, defensive)
+ *
+ * The wizard uses this to know which `fields_schema` to render and
+ * which "this document will be generated with…" indicator to show.
  */
 export function useTemplateForType(
   document_type: DocumentType | null | undefined
@@ -45,8 +50,15 @@ export function useTemplateForType(
     queryFn: async () => {
       if (!document_type) return null;
       const list = await templatesApi.list(document_type);
+
+      const tenantActive = list.find(
+        (t) => !t.is_system && t.is_active
+      );
+      const systemActive = list.find(
+        (t) => t.is_system && t.is_active
+      );
       const candidate =
-        list.find((t) => t.is_active) ?? list.find(Boolean) ?? null;
+        tenantActive ?? systemActive ?? list.find(Boolean) ?? null;
       if (!candidate) return null;
       return await templatesApi.get(candidate.id);
     },

@@ -27,6 +27,7 @@ import {
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { useDocument } from "@/hooks/documents/use-documents";
 import type { DocumentRead, DocumentType } from "@/lib/api/types";
 
 export type WizardStep = 1 | 2 | 3 | 4;
@@ -92,6 +93,39 @@ export function WizardProvider({ children }: { children: ReactNode }) {
     if (initialType) return 2;
     return 1;
   });
+
+  // When we land on `?id=<draft>` (e.g. user clicked a row in
+  // "Mis documentos") the only thing the URL gives us is the id. We
+  // still need to know the `document_type`, `title`, `content_data`
+  // and `ai_generated_body` so the wizard can render step 2's form
+  // and resolve the active template. Fetch the draft and hydrate the
+  // state once.
+  const { data: existingDocument } = useDocument(initialId);
+
+  // Adjust-state-during-render hydration. Two guards make it safe:
+  //   1. `state.documentType === null` — only hydrate when the wizard
+  //      hasn't been populated yet (initial draft load). The user's
+  //      mutations after this point set documentType, so subsequent
+  //      renders skip this branch.
+  //   2. The fetched doc's id matches the URL id we asked for — protects
+  //      against a stale cache delivering a different document.
+  if (
+    existingDocument &&
+    state.documentType === null &&
+    existingDocument.id === initialId
+  ) {
+    setState((s) => ({
+      ...s,
+      document: existingDocument,
+      documentId: existingDocument.id,
+      documentType: existingDocument.document_type as DocumentType,
+      title: existingDocument.title || s.title,
+      contentData:
+        (existingDocument.content_data as Record<string, unknown>) ??
+        s.contentData,
+      aiGeneratedBody: existingDocument.ai_generated_body ?? s.aiGeneratedBody,
+    }));
+  }
 
   const goToStep = useCallback((next: WizardStep) => {
     setStep(next);

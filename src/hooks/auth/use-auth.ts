@@ -1,21 +1,23 @@
 "use client";
 
 /**
- * DocuGob — Auth hooks.
+ * DocuGob — Auth hooks (browser).
  *
- * - useCurrentUser(): cache /users/me with React Query.
- * - useLogin() / useRegister() / useLogout(): mutations that persist
- *   the JWT pair via `tokenStorage` and invalidate the user query.
+ * Sprint C — tokens live in HttpOnly cookies set by `/api/auth/*`
+ * route handlers, not in localStorage. The hooks here only orchestrate
+ * the TanStack Query cache + the navigation side-effects.
  *
- * The hooks never throw on a missing token; consumers should read
- * `data` and `isLoading` and route accordingly.
+ * `useCurrentUser` is the source of truth for "am I logged in?": it
+ * hits `/api/auth/me`, which returns 401 when the session is missing
+ * or expired (and the proxy has already attempted a silent refresh).
  */
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+
 import { authApi } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/client";
 import type { UserWithTenant } from "@/lib/api/types";
-import { tokenStorage } from "@/lib/auth/storage";
 
 const USER_QUERY_KEY = ["auth", "me"] as const;
 
@@ -23,15 +25,17 @@ export function useCurrentUser() {
   return useQuery<UserWithTenant | null>({
     queryKey: USER_QUERY_KEY,
     queryFn: async () => {
-      if (!tokenStorage.isAuthenticated()) return null;
       try {
         return await authApi.me();
-      } catch {
-        tokenStorage.clear();
-        return null;
+      } catch (err) {
+        // A 401 means no session — return null instead of throwing so
+        // consumers can branch on `data === null` cleanly.
+        if (err instanceof ApiError && err.status === 401) return null;
+        throw err;
       }
     },
     staleTime: 60_000,
+    retry: false,
   });
 }
 
@@ -41,8 +45,7 @@ export function useLogin() {
   return useMutation({
     mutationFn: (params: { email: string; password: string }) =>
       authApi.login(params),
-    onSuccess: (tokens) => {
-      tokenStorage.set(tokens.access_token, tokens.refresh_token);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: USER_QUERY_KEY });
       router.push("/dashboard");
     },
@@ -59,8 +62,7 @@ export function useRegister() {
       full_name: string;
       tenant_name: string;
     }) => authApi.register(params),
-    onSuccess: (tokens) => {
-      tokenStorage.set(tokens.access_token, tokens.refresh_token);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: USER_QUERY_KEY });
       router.push("/dashboard");
     },
@@ -70,8 +72,13 @@ export function useRegister() {
 export function useLogout() {
   const queryClient = useQueryClient();
   const router = useRouter();
-  return () => {
-    tokenStorage.clear();
+  return async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // Best-effort: even if the call fails, blow away the local
+      // cache so the next /api/auth/me round-trip reflects reality.
+    }
     queryClient.setQueryData(USER_QUERY_KEY, null);
     queryClient.removeQueries();
     router.push("/sign-in");

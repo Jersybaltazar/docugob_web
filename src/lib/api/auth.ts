@@ -1,9 +1,15 @@
 /**
- * DocuGob — Auth API surface.
+ * DocuGob — Auth API surface (browser).
+ *
+ * Sprint C — these helpers call Next.js route handlers under
+ * `/api/auth/*`, which forward to FastAPI server-side and manage the
+ * HttpOnly cookies. The browser never sees the JWTs.
  */
 
 import { api } from "./client";
-import type { TokenResponse, UserWithTenant } from "./types";
+import type { UserWithTenant } from "./types";
+
+type LoggedInAck = { logged_in: boolean };
 
 export const authApi = {
   register(params: {
@@ -11,23 +17,19 @@ export const authApi = {
     password: string;
     full_name: string;
     tenant_name: string;
-  }): Promise<TokenResponse> {
-    return api.post<TokenResponse>("/auth/register", params, { skipAuth: true });
+  }): Promise<LoggedInAck> {
+    return api.post<LoggedInAck>("/auth/register", params);
   },
 
-  login(params: { email: string; password: string }): Promise<TokenResponse> {
-    return api.post<TokenResponse>("/auth/login", params, { skipAuth: true });
+  login(params: { email: string; password: string }): Promise<LoggedInAck> {
+    return api.post<LoggedInAck>("/auth/login", params);
   },
 
-  refresh(refresh_token: string): Promise<TokenResponse> {
-    return api.post<TokenResponse>(
-      "/auth/refresh",
-      { refresh_token },
-      { skipAuth: true }
-    );
+  logout(): Promise<LoggedInAck> {
+    return api.post<LoggedInAck>("/auth/logout");
   },
 
   me(): Promise<UserWithTenant> {
-    return api.get<UserWithTenant>("/users/me");
+    return api.get<UserWithTenant>("/auth/me");
   },
 };

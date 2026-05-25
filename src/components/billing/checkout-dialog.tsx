@@ -16,7 +16,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/use-toast";
 import { Loader2, CreditCard, ShieldCheck, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -37,9 +37,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { useSubscribe } from "@/hooks/use-billing";
+import { useSubscribe } from "@/hooks/billing/use-billing";
 import { ApiError } from "@/lib/api/client";
-import { useCurrentUser } from "@/hooks/use-auth";
+import { useCurrentUser } from "@/hooks/auth/use-auth";
 import { format } from "@/lib/format";
 import { loadCulqi } from "./culqi-loader";
 import type { PlanInfo } from "@/lib/api/types";
@@ -73,7 +73,11 @@ export function CheckoutDialog({
   const handleSubscribe = async (token: string) => {
     if (!plan) return;
     if (plan.code !== "pro" && plan.code !== "institutional") {
-      toast.error("Solo los planes pagos pueden suscribirse");
+      toast({
+        title: "Error",
+        description: "Solo los planes pagos pueden suscribirse",
+        variant: "destructive",
+      });
       return;
     }
     try {
@@ -81,7 +85,10 @@ export function CheckoutDialog({
         plan_code: plan.code as "pro" | "institutional",
         card_token: token,
       });
-      toast.success(`Suscrito al plan ${plan.name}`);
+      toast({
+        title: "Éxito",
+        description: `Suscrito al plan ${plan.name}`,
+      });
       onSuccess?.();
       onOpenChange(false);
     } catch (err) {
@@ -91,7 +98,7 @@ export function CheckoutDialog({
           : err instanceof Error
           ? err.message
           : "No se pudo procesar el pago";
-      toast.error(message);
+      toast({ title: "Error", description: message, variant: "destructive" });
     }
   };
 
@@ -269,7 +276,11 @@ function CulqiForm({
         if (tokenObj?.id) {
           onToken(tokenObj.id);
         } else if (errorObj) {
-          toast.error(errorObj.user_message ?? "Pago rechazado");
+          toast({
+            title: "Error",
+            description: errorObj.user_message ?? "Pago rechazado",
+            variant: "destructive",
+          });
         }
         try {
           window.Culqi?.close?.();
@@ -280,11 +291,14 @@ function CulqiForm({
 
       Culqi.open();
     } catch (err) {
-      toast.error(
-        err instanceof Error
-          ? err.message
-          : "No se pudo iniciar el proceso de pago"
-      );
+      toast({
+        title: "Error",
+        description:
+          err instanceof Error
+            ? err.message
+            : "No se pudo iniciar el proceso de pago",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }

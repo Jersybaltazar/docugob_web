@@ -13,7 +13,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useDocuments } from "@/hooks/use-documents";
+import { useDocuments } from "@/hooks/documents/use-documents";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -36,7 +36,7 @@ export default function DocumentsListPage() {
 
   const { data, isLoading, isFetching, isError } = useDocuments({
     page,
-    page_size: 20,
+    page_size: 10,
     search: filters.search || undefined,
     document_type:
       filters.document_type && filters.document_type !== "all"

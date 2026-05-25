@@ -14,7 +14,7 @@
 
 import Link from "next/link";
 import {
-  AlertCircle,
+  ArrowRight,
   BadgeCheck,
   Building2,
   Clock,
@@ -23,15 +23,13 @@ import {
   Mail,
   ShieldCheck,
   User,
-  Users,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
 
-import { useCurrentUser } from "@/hooks/use-auth";
+import { useCurrentUser } from "@/hooks/auth/use-auth";
 import { format } from "@/lib/format";
 
 export default function SettingsPage() {
@@ -39,7 +37,7 @@ export default function SettingsPage() {
 
   if (isLoading || !user) {
     return (
-      <div className="mx-auto max-w-4xl space-y-6">
+      <div className="mx-auto max-w-6xl space-y-6">
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-40" />
         <Skeleton className="h-40" />
@@ -50,7 +48,7 @@ export default function SettingsPage() {
   const tenant = user.current_tenant;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8">
+    <div className="mx-auto max-w-6xl space-y-8">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Configuración</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -139,37 +137,21 @@ export default function SettingsPage() {
         />
       </Section>
 
-      {/* ----- Future / locked features -------------------------------- */}
+      {/* ----- Available features (Sprint 8) -------------------------- */}
       <Section
-        title="Próximas funcionalidades"
-        description="Estas opciones llegan en los siguientes sprints. Si te interesan particularmente, escríbenos."
-        icon={<AlertCircle className="h-4 w-4" />}
+        title="Personalización"
+        description="Adapta DocuGob a la identidad de tu entidad."
+        icon={<ImageIcon className="h-4 w-4" />}
       >
-        <LockedRow
-          icon={<Users className="h-4 w-4" />}
-          title="Equipo y roles"
-          description="Invita a miembros, asígnales rol (admin / editor / lector) y áreas (Logística, RR.HH., Asesoría Legal)."
-          sprint="Sprint 7"
-        />
-        <LockedRow
+        <LinkRow
           icon={<ImageIcon className="h-4 w-4" />}
-          title="Branding institucional"
-          description="Sube el logo de tu entidad, ajusta los colores y personaliza el membrete de cada documento."
-          sprint="Sprint 7"
-        />
-        <LockedRow
-          icon={<ShieldCheck className="h-4 w-4" />}
-          title="Autenticación de dos factores (2FA)"
-          description="Protege tu cuenta con una clave temporal generada por Google Authenticator, Authy o similares."
-          sprint="Sprint 9"
-        />
-        <LockedRow
-          icon={<KeyRound className="h-4 w-4" />}
-          title="Audit log inmutable"
-          description="Revisa cada documento generado, quién lo creó y cuándo, con verificación criptográfica."
-          sprint="Sprint 9"
+          title="Mis plantillas"
+          description="Sube tus archivos .docx con tu propio membrete y pie de página. Reemplazan a las plantillas del sistema mientras estén activas."
+          href="/dashboard/settings/templates"
+          cta="Administrar"
         />
       </Section>
+
     </div>
   );
 }
@@ -235,31 +217,35 @@ function Field({
   );
 }
 
-function LockedRow({
+function LinkRow({
   icon,
   title,
   description,
-  sprint,
+  href,
+  cta,
 }: {
   icon: React.ReactNode;
   title: string;
   description: string;
-  sprint: string;
+  href: string;
+  cta: string;
 }) {
   return (
-    <div className="flex items-start gap-3 px-6 py-4">
-      <span className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-md bg-muted text-muted-foreground">
+    <Link
+      href={href}
+      className="flex items-start gap-3 px-6 py-4 transition-colors hover:bg-muted/40"
+    >
+      <span className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
         {icon}
       </span>
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <h3 className="font-medium">{title}</h3>
-          <Badge variant="outline" className="text-[10px]">
-            {sprint}
-          </Badge>
-        </div>
+        <h3 className="font-medium">{title}</h3>
         <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
       </div>
-    </div>
+      <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary">
+        {cta}
+        <ArrowRight className="h-3.5 w-3.5" />
+      </span>
+    </Link>
   );
 }

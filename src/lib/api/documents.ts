@@ -8,7 +8,6 @@
 
 import { api } from "./client";
 import { API_V1 } from "./config";
-import { tokenStorage } from "@/lib/auth/storage";
 import type {
   DocumentListItem,
   DocumentRead,
@@ -82,16 +81,58 @@ export const documentsApi = {
 
   /**
    * Download the .docx or .pdf as a Blob ready for `URL.createObjectURL`.
-   * We don't go through the envelope wrapper because the body is binary.
+   * Goes through the Next.js proxy at `/api/*`; the HttpOnly cookie is
+   * attached automatically and the proxy injects the bearer token.
    */
   async download(id: string, format: "docx" | "pdf"): Promise<Blob> {
-    const token = tokenStorage.getAccess();
-    const res = await fetch(`${API_V1}/documents/${id}/download/${format}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    });
+    const res = await fetch(
+      `${API_V1}/documents/${id}/download/${format}`,
+      { credentials: "same-origin" }
+    );
     if (!res.ok) {
       throw new Error(`Download failed: ${res.status} ${res.statusText}`);
     }
     return res.blob();
+  },
+
+  /**
+   * Dry-run preview — backend renders the document with overrides but
+   * does NOT assign a correlative or persist anything. Returns the
+   * blob + the format ("pdf" or "docx") so the caller can show the PDF
+   * inline or surface a download CTA when LibreOffice is unavailable.
+   */
+  async preview(
+    id: string,
+    body: GenerateDocumentBody = {}
+  ): Promise<{ blob: Blob; format: "pdf" | "docx" }> {
+    const res = await fetch(`${API_V1}/documents/${id}/preview`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      credentials: "same-origin",
+    });
+    if (!res.ok) {
+      // Try to surface the envelope's message when present
+      try {
+        const payload = await res.json();
+        throw new Error(payload?.message ?? `HTTP ${res.status}`);
+      } catch (jsonErr) {
+        if (jsonErr instanceof Error && jsonErr.message.startsWith("HTTP")) {
+          throw jsonErr;
+        }
+        throw new Error(`Preview failed: ${res.status} ${res.statusText}`);
+      }
+    }
+    // Prefer the explicit `X-Preview-Format` header but fall back to
+    // sniffing the Content-Type — protects against the proxy or a
+    // load balancer stripping custom headers.
+    const explicit = res.headers.get("x-preview-format");
+    const contentType = res.headers.get("content-type") ?? "";
+    const looksLikeDocx =
+      contentType.includes("wordprocessingml") ||
+      contentType.includes("officedocument");
+    const format: "pdf" | "docx" =
+      explicit === "docx" || (!explicit && looksLikeDocx) ? "docx" : "pdf";
+    return { blob: await res.blob(), format };
   },
 };

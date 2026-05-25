@@ -1,37 +1,40 @@
-"use client";
-
 /**
- * DocuGob — Public pricing page.
+ * DocuGob — Public pricing page (Server Component, Sprint D).
  *
- * Anyone can visit; the CTAs adapt depending on auth state:
- *  - Unauthenticated: "Comenzar gratis" → /sign-up
- *  - Authenticated free: "Suscribirse" opens the checkout dialog
- *  - Authenticated paid: "Plan actual" badge on the matching card
+ * AUDIT §3.2 + §10.3 — the marketing chrome ships in the initial HTML
+ * with the plans already rendered. SEO crawlers see the prices, the
+ * unauthenticated visitor sees the cards instantly, and we avoid the
+ * "flash of empty grid" the previous client-side fetch produced.
+ *
+ * The interactive parts (plan selection + Culqi checkout dialog) live
+ * in the `<PricingPlansGrid>` client island. The two fetches run in
+ * parallel through `Promise.all` for a single round-trip latency.
  */
 
 import Link from "next/link";
-import { useState } from "react";
+import type { Metadata } from "next";
 
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { PlanCard } from "@/components/billing/plan-card";
-import { CheckoutDialog } from "@/components/billing/checkout-dialog";
+import { PricingPlansGrid } from "@/components/billing/pricing-plans-grid";
+import { getOptionalUser } from "@/lib/server/current-user";
+import { getPlansServer } from "@/lib/server/plans";
 
-import { useCurrentUser } from "@/hooks/use-auth";
-import { usePlans } from "@/hooks/use-billing";
-import type { PlanInfo } from "@/lib/api/types";
+export const metadata: Metadata = {
+  title: "Planes y precios",
+  description:
+    "Plan Gratuito para siempre. Plan Profesional desde S/19.90 al mes. Plan Institucional para entidades del sector público peruano.",
+};
 
-export default function PricingPage() {
-  const plans = usePlans();
-  // /users/me already carries the active tenant plan, so we don't hit
-  // /billing/subscription on the public page (which would 401 for
-  // anonymous visitors and clutter the network tab).
-  const { data: user } = useCurrentUser();
+export default async function PricingPage() {
+  // Two independent reads — fire them in parallel.
+  const [user, plansResponse] = await Promise.all([
+    getOptionalUser("/pricing"),
+    getPlansServer(),
+  ]);
 
-  const [selectedPlan, setSelectedPlan] = useState<PlanInfo | null>(null);
-
-  const isAuthed = Boolean(user);
+  const isAuthed = user !== null;
   const currentPlanCode = (user?.current_tenant?.plan ?? "free").toLowerCase();
+  const provider = plansResponse?.provider ?? "Culqi";
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -71,54 +74,23 @@ export default function PricingPage() {
         </section>
 
         <section className="mx-auto max-w-6xl px-6 pb-20">
-          {plans.isLoading ? (
-            <div className="grid gap-6 md:grid-cols-3">
-              <Skeleton className="h-96" />
-              <Skeleton className="h-96" />
-              <Skeleton className="h-96" />
-            </div>
-          ) : plans.isError ? (
+          {plansResponse ? (
+            <PricingPlansGrid
+              plansResponse={plansResponse}
+              isAuthed={isAuthed}
+              currentPlanCode={currentPlanCode}
+            />
+          ) : (
             <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-6 text-center text-sm text-destructive">
               No se pudieron cargar los planes. Asegúrate de que la API esté
               corriendo y refresca la página.
-            </div>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-3">
-              {(plans.data?.plans ?? []).map((plan) => {
-                const isCurrent = plan.code === currentPlanCode;
-                const highlight = plan.code === "pro";
-                return (
-                  <PlanCard
-                    key={plan.code}
-                    plan={plan}
-                    highlighted={highlight}
-                    badge={
-                      isCurrent
-                        ? "Plan actual"
-                        : highlight
-                        ? "Recomendado"
-                        : undefined
-                    }
-                    renderCta={(p) => (
-                      <PricingCta
-                        plan={p}
-                        isAuthed={isAuthed}
-                        isCurrent={isCurrent}
-                        onSelect={() => setSelectedPlan(p)}
-                      />
-                    )}
-                  />
-                );
-              })}
             </div>
           )}
 
           <p className="mt-10 text-center text-xs text-muted-foreground">
             Precios en soles peruanos (S/) sin IGV. Procesado por{" "}
-            {plans.data?.provider === "mock"
-              ? "Mock (dev)"
-              : plans.data?.provider ?? "Culqi"}{" "}
-            · Métodos: tarjetas Visa/Mastercard.
+            {provider === "mock" ? "Mock (dev)" : provider} · Métodos: tarjetas
+            Visa/Mastercard.
           </p>
         </section>
       </main>
@@ -131,63 +103,6 @@ export default function PricingPage() {
           </Link>
         </div>
       </footer>
-
-      {plans.data && (
-        <CheckoutDialog
-          plan={selectedPlan}
-          open={Boolean(selectedPlan)}
-          onOpenChange={(open) => !open && setSelectedPlan(null)}
-          provider={plans.data.provider}
-          publicKey={plans.data.public_key}
-        />
-      )}
     </div>
-  );
-}
-
-function PricingCta({
-  plan,
-  isAuthed,
-  isCurrent,
-  onSelect,
-}: {
-  plan: PlanInfo;
-  isAuthed: boolean;
-  isCurrent: boolean;
-  onSelect: () => void;
-}) {
-  if (isCurrent) {
-    return (
-      <Button disabled className="w-full" variant="outline">
-        Plan actual
-      </Button>
-    );
-  }
-  if (plan.code === "free") {
-    return (
-      <Button asChild className="w-full" variant="outline">
-        <Link href={isAuthed ? "/dashboard" : "/sign-up"}>
-          {isAuthed ? "Ir al panel" : "Comenzar gratis"}
-        </Link>
-      </Button>
-    );
-  }
-  if (!isAuthed) {
-    return (
-      <Button asChild className="w-full">
-        <Link
-          href={`/sign-up?next=${encodeURIComponent(
-            `/pricing?plan=${plan.code}`
-          )}`}
-        >
-          Crear cuenta y suscribirse
-        </Link>
-      </Button>
-    );
-  }
-  return (
-    <Button className="w-full" onClick={onSelect}>
-      Suscribirse al plan {plan.name}
-    </Button>
   );
 }

@@ -5,7 +5,7 @@ import type { NextConfig } from "next";
  *
  * Production targets:
  *  - Vercel (default — no custom runtime needed).
- *  - The Content-Security-Policy is defined in middleware.ts because
+ *  - The Content-Security-Policy is defined in proxy.ts because
  *    nonces need per-request values; the headers below are the static
  *    ones that Vercel can serve from its edge.
  */

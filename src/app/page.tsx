@@ -2,20 +2,21 @@ import Link from "next/link";
 import {
   ArrowRight,
   BadgeCheck,
-  Building2,
   Check,
+  Eye,
   FileText,
-  Mail,
-  Mails,
+  ImageIcon,
+  Layers,
   ShieldCheck,
   Sparkles,
   Stamp,
-  Users,
+  Upload,
   Workflow,
   Zap,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { DOCUMENT_CATEGORIES } from "@/lib/document-types";
 
 /**
  * DocuGob — Marketing landing.
@@ -26,8 +27,8 @@ import { Button } from "@/components/ui/button";
  *  - Trust strip (logos / law refs)
  *  - 3 core value props
  *  - How it works (4 steps mirroring the wizard)
- *  - Document types grid (the 8 normados)
- *  - Use cases by role
+ *  - Categories grid (6 families covering 30 templates)
+ *  - Custom templates feature (upload your .docx with your letterhead)
  *  - Pricing teaser
  *  - Final CTA
  *  - Footer with legal references
@@ -50,8 +51,8 @@ export default function HomePage() {
         <TrustStrip />
         <ValuePropsSection />
         <HowItWorksSection />
-        <DocumentTypesSection />
-        <UseCasesSection />
+        <DocumentCategoriesSection />
+        <CustomTemplatesSection />
         <PricingTeaserSection />
         <FinalCtaSection />
       </main>
@@ -121,6 +122,7 @@ function SiteFooter() {
               { href: "/pricing", label: "Planes y precios" },
               { href: "#documentos", label: "Tipos de documento" },
               { href: "#como-funciona", label: "Cómo funciona" },
+              { href: "#personalizacion", label: "Plantillas con tu membrete" },
             ]}
           />
           <FooterColumn
@@ -176,7 +178,7 @@ function HeroSection() {
       <div className="mx-auto max-w-5xl px-6 py-20 text-center">
         <p className="mb-6 inline-flex items-center gap-2 rounded-full border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
           <Sparkles className="h-3.5 w-3.5 text-primary" aria-hidden />
-          Asistente IA en español incluido — primer documento en 2 minutos
+          30 plantillas oficiales · asistente IA en español · tu propio membrete
         </p>
         <h1
           id="hero-title"
@@ -253,7 +255,7 @@ function Badge({ children }: { children: React.ReactNode }) {
 }
 
 // ---------------------------------------------------------------------------
-// Value props
+// Value props — 3 features that close the deal
 // ---------------------------------------------------------------------------
 
 function ValuePropsSection() {
@@ -274,19 +276,19 @@ function ValuePropsSection() {
 
       <div className="mt-12 grid gap-6 sm:grid-cols-3">
         <ValueCard
-          icon={<FileText className="h-5 w-5" />}
-          title="8 tipos normados"
-          description="Oficios simples y múltiples, memorandos, informes ordinarios y técnicos, cartas, constancias y proveídos con los formatos oficiales."
+          icon={<Layers className="h-5 w-5" />}
+          title="30 plantillas oficiales"
+          description="Oficios, memorandos, informes, resoluciones, solicitudes, actas, constancias y más — organizadas en 6 categorías, todas con los formatos exigidos por la Ley N° 27444."
+        />
+        <ValueCard
+          icon={<ImageIcon className="h-5 w-5" />}
+          title="Tu propio membrete"
+          description="Sube tu .docx con la cabecera y pie de página de tu entidad. DocuGob rellena el contenido y respeta tu identidad institucional al pie de la letra."
         />
         <ValueCard
           icon={<Sparkles className="h-5 w-5" />}
-          title="Asistente IA en español formal"
-          description="Redacta el cuerpo del documento por ti, con tono institucional, fórmulas de cortesía correctas y atajos &quot;Más formal&quot; o &quot;Más conciso&quot;."
-        />
-        <ValueCard
-          icon={<Stamp className="h-5 w-5" />}
-          title="Numeración automática"
-          description="Secuencia correlativa por área, año y tipo de documento. Sin duplicados, sin errores manuales, listo para auditoría."
+          title="IA + numeración automática"
+          description="Asistente IA en español formal que redacta el cuerpo. Numeración correlativa por área y año sin duplicados, lista para auditoría."
         />
       </div>
     </section>
@@ -316,7 +318,7 @@ function ValueCard({
 }
 
 // ---------------------------------------------------------------------------
-// How it works
+// How it works — 4-step wizard
 // ---------------------------------------------------------------------------
 
 function HowItWorksSection() {
@@ -343,7 +345,7 @@ function HowItWorksSection() {
           <Step
             number={1}
             title="Elige el tipo"
-            description="Oficio simple, memorando, informe… Selecciona la plantilla que se ajusta a tu trámite."
+            description="30 plantillas en 6 categorías. Filtrá por uso, encontrá la que necesitás."
           />
           <Step
             number={2}
@@ -353,12 +355,12 @@ function HowItWorksSection() {
           <Step
             number={3}
             title="Deja que la IA redacte"
-            description="El asistente genera el cuerpo en español formal. Editas, ajustas el tono y listo."
+            description="El asistente genera el cuerpo en español formal. Editás, ajustás el tono y listo."
           />
           <Step
             number={4}
-            title="Descarga y firma"
-            description="Archivo .docx y .pdf listos para imprimir, sellar y firmar."
+            title="Vista previa y descarga"
+            description="Mirá el PDF real (no una aproximación) antes de generar. Después descargás .docx y .pdf."
           />
         </ol>
       </div>
@@ -387,10 +389,10 @@ function Step({
 }
 
 // ---------------------------------------------------------------------------
-// Document types
+// Document categories — 6 buckets covering 30 templates
 // ---------------------------------------------------------------------------
 
-function DocumentTypesSection() {
+function DocumentCategoriesSection() {
   return (
     <section
       id="documentos"
@@ -399,104 +401,217 @@ function DocumentTypesSection() {
     >
       <header className="text-center">
         <h2 id="documentos-title" className="text-3xl font-semibold tracking-tight">
-          Los 8 tipos de documento incluidos
+          30 plantillas en 6 categorías
         </h2>
         <p className="mt-3 text-muted-foreground">
-          Catálogo basado en directivas reales del MEF, MINSA y municipalidades
-          peruanas. Sprint a sprint sumamos más.
+          Catálogo basado en directivas reales del MEF, MINSA, gobiernos
+          regionales y municipalidades del Perú.
         </p>
       </header>
 
       <div
-        className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+        className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
         role="list"
       >
-        {[
-          { icon: Mail, label: "Oficio Simple" },
-          { icon: Mails, label: "Oficio Múltiple" },
-          { icon: FileText, label: "Memorando" },
-          { icon: FileText, label: "Informe Ordinario" },
-          { icon: FileText, label: "Informe Técnico" },
-          { icon: Mail, label: "Carta Institucional" },
-          { icon: BadgeCheck, label: "Constancia" },
-          { icon: ArrowRight, label: "Proveído" },
-        ].map(({ icon: Icon, label }) => (
-          <div
-            key={label}
-            role="listitem"
-            className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3"
-          >
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-primary">
-              <Icon className="h-4 w-4" />
-            </span>
-            <span className="text-sm font-medium">{label}</span>
-          </div>
-        ))}
+        {DOCUMENT_CATEGORIES.map((cat) => {
+          const Icon = cat.icon;
+          return (
+            <div
+              key={cat.code}
+              role="listitem"
+              className="flex items-start gap-3 rounded-lg border bg-card p-4"
+            >
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <Icon className="h-4 w-4" />
+              </span>
+              <div>
+                <p className="text-sm font-medium">{cat.label}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {cat.description}
+                </p>
+              </div>
+            </div>
+          );
+        })}
       </div>
+
+      <p className="mt-8 text-center text-xs text-muted-foreground">
+        Resoluciones, oficios circulares, actas, hojas de ruta, solicitudes
+        Ley 27806, certificados y muchas más.{" "}
+        <Link href="/sign-up" className="font-medium text-primary underline-offset-2 hover:underline">
+          Ver el catálogo completo
+        </Link>
+      </p>
     </section>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Use cases
+// Custom templates — flagship Sprint 8 feature
 // ---------------------------------------------------------------------------
 
-function UseCasesSection() {
+function CustomTemplatesSection() {
   return (
     <section
-      aria-labelledby="usuarios-title"
+      id="personalizacion"
+      aria-labelledby="personalizacion-title"
       className="border-y bg-muted/30 py-20"
     >
       <div className="mx-auto max-w-5xl px-6">
         <header className="text-center">
-          <h2 id="usuarios-title" className="text-3xl font-semibold tracking-tight">
-            Hecho para tu día a día
+          <h2
+            id="personalizacion-title"
+            className="text-3xl font-semibold tracking-tight"
+          >
+            Tus plantillas, tu identidad institucional
           </h2>
+          <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
+            Sube tu propio archivo Word con el membrete oficial, los logos y el
+            pie de página de tu entidad. DocuGob rellena solo el contenido —
+            tu formato queda intacto.
+          </p>
         </header>
 
-        <div className="mt-12 grid gap-6 sm:grid-cols-3">
-          <UseCase
-            icon={<Users className="h-5 w-5" />}
-            role="Secretaria(o) administrativa(o)"
-            quote="Reduzco el tiempo de armar un oficio de 30 minutos a 2. La numeración correlativa por área la lleva la plataforma."
-          />
-          <UseCase
-            icon={<Building2 className="h-5 w-5" />}
-            role="Jefatura de área"
-            quote="Apruebo y firmo más rápido porque los documentos llegan ya con el formato oficial y la fundamentación correcta."
-          />
-          <UseCase
-            icon={<ShieldCheck className="h-5 w-5" />}
-            role="Asesoría jurídica"
-            quote="El asistente cita las normas que le indico, nunca inventa expedientes y marca con [FALTA:...] cualquier dato ausente."
-          />
+        <div className="mt-12 grid gap-6 lg:grid-cols-2">
+          {/* Left: How it works */}
+          <div className="space-y-4">
+            <FeaturePoint
+              icon={<Upload className="h-4 w-4" />}
+              title="Subes tu .docx"
+              description="El mismo archivo Word que ya usas en tu entidad — con sus logos, dirección y pie de página."
+            />
+            <FeaturePoint
+              icon={<Stamp className="h-4 w-4" />}
+              title="Marcas dónde va el contenido"
+              description={
+                <>
+                  Pegás placeholders simples como{" "}
+                  <code className="rounded bg-background px-1 py-0.5 font-mono text-[11px] ring-1 ring-border">
+                    {"{{ cuerpo }}"}
+                  </code>{" "}
+                  o{" "}
+                  <code className="rounded bg-background px-1 py-0.5 font-mono text-[11px] ring-1 ring-border">
+                    {"{{ destinatario_nombre }}"}
+                  </code>{" "}
+                  donde quieras que DocuGob rellene.
+                </>
+              }
+            />
+            <FeaturePoint
+              icon={<Eye className="h-4 w-4" />}
+              title="Vista previa fiel antes de generar"
+              description="Ves el PDF real del documento — con tu membrete, tu pie, tu cuerpo redactado — antes de comprometerte con un número correlativo."
+            />
+            <FeaturePoint
+              icon={<Sparkles className="h-4 w-4" />}
+              title="La IA respeta tu estilo"
+              description="El asistente genera contenido en español formal pero tu identidad visual es tuya. Cero plantillas genéricas."
+            />
+          </div>
+
+          {/* Right: Visual mock of a document with letterhead */}
+          <div className="rounded-xl border bg-background p-6 shadow-sm">
+            <div className="rounded-md border bg-white p-4 text-neutral-900 dark:bg-neutral-100">
+              {/* Mock letterhead */}
+              <div className="flex items-start gap-3 border-b pb-3">
+                <div className="grid h-12 w-12 place-items-center rounded bg-gradient-to-br from-emerald-400 to-yellow-400 text-[10px] font-bold text-white">
+                  GR
+                </div>
+                <div className="min-w-0 flex-1 text-[10px] uppercase tracking-wide">
+                  <p className="font-semibold leading-tight">
+                    UNIDAD EJECUTORA 405
+                  </p>
+                  <p className="leading-tight">RED DE SALUD HUAMALIES</p>
+                  <p className="mt-0.5 normal-case text-[9px] text-neutral-500">
+                    Jr. 28 de Julio N° 260 — Llata
+                  </p>
+                </div>
+                <div className="grid h-12 w-10 place-items-center rounded bg-neutral-900 text-[7px] font-bold leading-tight text-white">
+                  HCO
+                  <br />
+                  CDR
+                </div>
+              </div>
+
+              {/* Mock body */}
+              <div className="space-y-2 py-4 text-[9px]">
+                <p className="text-center font-semibold underline">
+                  INFORME N° 001-2026-RSH/SISE
+                </p>
+                <div className="mt-3 space-y-1.5">
+                  <div>
+                    <span className="font-semibold">A : </span>
+                    <span className="rounded bg-amber-100 px-1 ring-1 ring-amber-200">
+                      {"{{ destinatario_cargo }}"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">ASUNTO : </span>
+                    <span className="rounded bg-amber-100 px-1 ring-1 ring-amber-200">
+                      {"{{ asunto }}"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">FECHA : </span>
+                    <span className="rounded bg-amber-100 px-1 ring-1 ring-amber-200">
+                      {"{{ ciudad }}, {{ fecha }}"}
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-3 rounded bg-amber-100 p-2 ring-1 ring-amber-200">
+                  <span className="font-mono">{"{{ cuerpo }}"}</span>
+                  <span className="text-[8px] text-neutral-500">
+                    {" "}
+                    ← lo redacta la IA
+                  </span>
+                </div>
+              </div>
+
+              {/* Mock footer */}
+              <div className="border-t pt-2 text-center text-[8px] italic text-neutral-500">
+                www.rishuamalies.gob.pe · 983152902 — SECRETARIA
+              </div>
+            </div>
+
+            <p className="mt-4 text-center text-xs text-muted-foreground">
+              Las zonas en amarillo se rellenan automáticamente. El resto
+              de tu Word queda exactamente igual.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-10 text-center">
+          <Button asChild size="lg">
+            <Link href="/sign-up">
+              Probar con mi plantilla
+              <ArrowRight className="ml-1.5 h-4 w-4" />
+            </Link>
+          </Button>
         </div>
       </div>
     </section>
   );
 }
 
-function UseCase({
+function FeaturePoint({
   icon,
-  role,
-  quote,
+  title,
+  description,
 }: {
   icon: React.ReactNode;
-  role: string;
-  quote: string;
+  title: string;
+  description: React.ReactNode;
 }) {
   return (
-    <article className="rounded-xl bg-background p-6 ring-1 ring-border">
-      <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+    <div className="flex items-start gap-3 rounded-lg bg-background p-4 ring-1 ring-border">
+      <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
         {icon}
+      </span>
+      <div>
+        <p className="font-medium">{title}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       </div>
-      <p className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-        {role}
-      </p>
-      <p className="mt-2 text-sm leading-relaxed">
-        &laquo;{quote}&raquo;
-      </p>
-    </article>
+    </div>
   );
 }
 
@@ -522,7 +637,7 @@ function PricingTeaserSection() {
         <Bullet>5 documentos al mes en el plan Gratuito</Bullet>
         <Bullet>Documentos ilimitados desde S/19.90/mes</Bullet>
         <Bullet>Sin marca de agua desde Pro</Bullet>
-        <Bullet>Cancelas cuando quieras</Bullet>
+        <Bullet>Plantillas con tu membrete en Institucional</Bullet>
       </ul>
 
       <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">

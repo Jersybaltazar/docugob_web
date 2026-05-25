@@ -11,7 +11,7 @@
  */
 
 import Link from "next/link";
-import { useTemplates } from "@/hooks/use-templates";
+import { useTemplates } from "@/hooks/templates/use-templates";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

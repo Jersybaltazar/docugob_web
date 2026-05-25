@@ -1,19 +1,22 @@
 /**
- * DocuGob — fetch wrapper for the FastAPI backend.
+ * DocuGob — fetch wrapper for the Next.js `/api/*` proxy.
  *
- * Responsibilities:
- *  - Inject the JWT access token on every request.
- *  - On 401 with an expired access token, transparently refresh and retry once.
- *  - Unwrap the standard {success, message, data, errors} envelope and
- *    surface a typed Error with the backend's error message.
+ * Sprint C — the browser only knows about `/api/*`. Cookies are sent
+ * automatically (same-origin, `credentials: "include"` not even
+ * required) and the proxy on the Next.js server handles auth headers
+ * + silent JWT refresh.
+ *
+ * Responsibilities that remain here:
+ *  - Unwrap the standard `{success, message, data, errors}` envelope.
+ *  - Surface a typed `ApiError` with the backend's error message.
  *
  * Usage:
- *    const tokens = await api.post<TokenResponse>("/auth/login", { ... });
- *    const me = await api.get<UserWithTenant>("/users/me");
+ *    const me = await api.get<UserWithTenant>("/auth/me");
+ *    await api.post("/documents", { ... });
  */
 
 import { API_V1, DEBUG_API } from "./config";
-import { tokenStorage } from "@/lib/auth/storage";
+import { logger } from "@/lib/logger";
 
 export type ApiEnvelope<T> = {
   success: boolean;
@@ -35,60 +38,16 @@ export class ApiError extends Error {
 }
 
 type RequestOptions = {
-  /** Skip token attachment (used for login/register/refresh). */
+  /**
+   * No-op kept for backward compatibility with the previous client.
+   * Auth is decided server-side by the proxy.
+   */
   skipAuth?: boolean;
-  /** Internal — set to true after a refresh attempt to avoid loops. */
-  _retried?: boolean;
-  /** Override the standard envelope unwrap (rare; used by file downloads). */
+  /** Return the raw `Response` (rare; used by file downloads). */
   rawResponse?: boolean;
   /** Pass-through fetch options (signal, cache, etc.). */
   fetchOptions?: RequestInit;
 };
-
-let refreshPromise: Promise<boolean> | null = null;
-
-async function refreshAccessToken(): Promise<boolean> {
-  if (refreshPromise) return refreshPromise;
-
-  refreshPromise = (async () => {
-    const refresh = tokenStorage.getRefresh();
-    if (!refresh) return false;
-
-    try {
-      const res = await fetch(`${API_V1}/auth/refresh`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refresh_token: refresh }),
-      });
-      if (!res.ok) {
-        tokenStorage.clear();
-        return false;
-      }
-      const body = (await res.json()) as ApiEnvelope<{
-        access_token: string;
-        refresh_token: string;
-      }>;
-      if (!body.success || !body.data) {
-        tokenStorage.clear();
-        return false;
-      }
-      tokenStorage.set(body.data.access_token, body.data.refresh_token);
-      return true;
-    } catch (e) {
-      if (DEBUG_API) console.warn("refresh failed", e);
-      tokenStorage.clear();
-      return false;
-    } finally {
-      // Release the lock at the end of the microtask so concurrent
-      // 401-retries observe the same outcome.
-      setTimeout(() => {
-        refreshPromise = null;
-      }, 0);
-    }
-  })();
-
-  return refreshPromise;
-}
 
 async function request<T>(
   method: string,
@@ -96,37 +55,25 @@ async function request<T>(
   body?: unknown,
   options: RequestOptions = {}
 ): Promise<T> {
-  const url = path.startsWith("http") ? path : `${API_V1}${path}`;
+  const url = path.startsWith("/") ? `${API_V1}${path}` : `${API_V1}/${path}`;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.fetchOptions?.headers as Record<string, string> | undefined),
   };
 
-  if (!options.skipAuth) {
-    const token = tokenStorage.getAccess();
-    if (token) headers.Authorization = `Bearer ${token}`;
-  }
-
-  if (DEBUG_API) console.debug(`[api] ${method} ${url}`);
+  if (DEBUG_API) logger.debug(`[api] ${method} ${url}`);
 
   const res = await fetch(url, {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
+    // Same-origin — cookies are sent by default, but be explicit so
+    // misconfigured fetch wrappers can't strip them.
+    credentials: "same-origin",
     ...options.fetchOptions,
   });
 
-  // Auto-refresh on access expiry (only one retry allowed).
-  if (res.status === 401 && !options.skipAuth && !options._retried) {
-    const refreshed = await refreshAccessToken();
-    if (refreshed) {
-      return request<T>(method, path, body, { ...options, _retried: true });
-    }
-    tokenStorage.clear();
-  }
-
   if (options.rawResponse) {
-    // Caller wants the raw Response (e.g., binary download).
     return res as unknown as T;
   }
 

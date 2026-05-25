@@ -18,8 +18,8 @@
  * the user clicks "Continuar" goes to Step 4 / generate.
  */
 
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
+import { useMemo, useState } from "react";
+import { toast } from "@/components/ui/use-toast";
 import {
   ChevronLeft,
   ChevronRight,
@@ -36,7 +36,7 @@ import { TiptapEditor } from "@/components/editor/tiptap-editor";
 import { AIValidationPanel } from "@/components/ai/ai-validation-panel";
 import { AIUsageBar } from "@/components/ai/ai-usage-bar";
 import { ApiError } from "@/lib/api/client";
-import { useDraftForDocument, useRefineAI } from "@/hooks/use-ai";
+import { useDraftForDocument, useRefineAI } from "@/hooks/ai/use-ai";
 import { htmlToText, textToHtml } from "@/lib/rich-text";
 import { useWizard } from "./wizard-context";
 import type { AIDraftResponse } from "@/lib/api/types";
@@ -63,7 +63,6 @@ export function StepAI() {
     contentData,
     aiGeneratedBody,
     setAIGeneratedBody,
-    setDocument,
     back,
     next,
   } = useWizard();
@@ -84,13 +83,16 @@ export function StepAI() {
   const busy = draft.isPending || refine.isPending;
 
   // Whenever Step 2 changes the body upstream (e.g. user came back and
-  // re-saved Step 2), pull that into the editor.
-  useEffect(() => {
+  // re-saved Step 2), pull that into the editor. We do this with the
+  // "adjust state during render" pattern instead of a useEffect, so
+  // React 19's `set-state-in-effect` rule stays happy.
+  const [lastWizardBody, setLastWizardBody] = useState(aiGeneratedBody);
+  if (aiGeneratedBody !== lastWizardBody) {
+    setLastWizardBody(aiGeneratedBody);
     if (!editorHtml && aiGeneratedBody) {
       setEditorHtml(textToHtml(aiGeneratedBody));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aiGeneratedBody]);
+  }
 
   const hasBody = Boolean(editorHtml && editorHtml.replace(/<[^>]+>/g, "").trim());
 
@@ -117,7 +119,11 @@ export function StepAI() {
 
   const handleGenerate = async () => {
     if (!documentId) {
-      toast.error("Primero guarda el borrador en el paso 2");
+      toast({
+        title: "Error",
+        description: "Primero guarda el borrador en el paso 2",
+        variant: "destructive",
+      });
       return;
     }
     try {
@@ -132,14 +138,17 @@ export function StepAI() {
       // We don't need the actual fetch — the document detail will be
       // refetched by the invalidation in the hook.
       if (resp.usage.cached) {
-        toast.success("Redacción recuperada de caché (sin costo)");
+        toast({
+          title: "Éxito",
+          description: "Redacción recuperada de caché (sin costo)",
+        });
       } else {
-        toast.success("Redacción generada por IA");
+        toast({ title: "Éxito", description: "Redacción generada por IA" });
       }
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "No se pudo generar el cuerpo";
-      toast.error(message);
+      toast({ title: "Error", description: message, variant: "destructive" });
     }
   };
 
@@ -147,7 +156,12 @@ export function StepAI() {
     if (!instruction.trim()) return;
     const currentBody = htmlToText(editorHtml);
     if (!currentBody.trim() || currentBody.length < 10) {
-      toast.error("Primero redacta o genera un cuerpo para poder refinarlo");
+      toast({
+        title: "Error",
+        description:
+          "Primero redacta o genera un cuerpo para poder refinarlo",
+        variant: "destructive",
+      });
       return;
     }
     try {
@@ -156,11 +170,11 @@ export function StepAI() {
         instruction: instruction.trim(),
       });
       applyResponse(resp);
-      toast.success("Refinamiento aplicado");
+      toast({ title: "Éxito", description: "Refinamiento aplicado" });
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "No se pudo refinar el cuerpo";
-      toast.error(message);
+      toast({ title: "Error", description: message, variant: "destructive" });
     }
   };
 

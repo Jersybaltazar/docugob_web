@@ -1,68 +1,36 @@
-"use client";
+/**
+ * DocuGob — Dashboard layout (Server Component).
+ *
+ * AUDIT §3.1 — the chrome (sidebar, topbar, providers) is rendered
+ * server-side from the freshly-read `user`. No client spinner before
+ * we know who the visitor is.
+ *
+ * Flow:
+ *   1. `requireCurrentUser()` reads the HttpOnly access cookie and
+ *      calls FastAPI /users/me. If the access JWT is stale but the
+ *      refresh cookie is still valid, it transparently bounces
+ *      through /api/auth/refresh-redirect to rotate the tokens and
+ *      come back here.
+ *   2. If no valid session at all, redirect to /sign-in.
+ *   3. Otherwise render `<AuthHydrator>` (seeds the TanStack cache so
+ *      child Client Components don't re-fetch) + `<DashboardShell>`.
+ */
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { AuthHydrator } from "@/components/providers/auth-hydrator";
+import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { requireCurrentUser } from "@/lib/server/current-user";
 
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/layout/app-sidebar";
-import { Topbar } from "@/components/layout/topbar";
-import { CommandPalette } from "@/components/layout/command-palette";
-import { useCurrentUser } from "@/hooks/use-auth";
-import { tokenStorage } from "@/lib/auth/storage";
-
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-  const { data: user, isLoading } = useCurrentUser();
-
-  // Client-side redirect: the middleware already guards on the cookie,
-  // but localStorage lives only in the browser, so we double-check here.
-  useEffect(() => {
-    if (!tokenStorage.isAuthenticated()) {
-      router.replace("/sign-in");
-    }
-  }, [router]);
-
-  // While the /users/me query resolves, render a minimal shell so the
-  // sidebar/topbar don't flash with empty user info.
-  if (isLoading || user === undefined) {
-    return (
-      <div className="min-h-screen grid place-items-center text-sm text-muted-foreground">
-        Cargando tu cuenta…
-      </div>
-    );
-  }
-
-  if (user === null) {
-    // The hook will have triggered storage.clear(); router.replace runs
-    // in the effect above.
-    return null;
-  }
+  const user = await requireCurrentUser("/dashboard");
 
   return (
-    <SidebarProvider>
-      {/* Keyboard skip link (WCAG 2.4.1). Hidden until focused. */}
-      <a
-        href="#dashboard-main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
-      >
-        Saltar al contenido principal
-      </a>
-      <AppSidebar />
-      <SidebarInset>
-        <Topbar />
-        <main
-          id="dashboard-main"
-          tabIndex={-1}
-          className="flex-1 px-6 py-6 lg:px-8 focus:outline-none"
-        >
-          {children}
-        </main>
-      </SidebarInset>
-      <CommandPalette />
-    </SidebarProvider>
+    <>
+      <AuthHydrator user={user} />
+      <DashboardShell user={user}>{children}</DashboardShell>
+    </>
   );
 }

@@ -16,7 +16,7 @@ import {
   type RefineParams,
   type SuggestTitleParams,
 } from "@/lib/api/ai";
-import { documentsKeys } from "./use-documents";
+import { documentsKeys } from "@/hooks/documents/use-documents";
 
 export function useDraftBody() {
   return useMutation({

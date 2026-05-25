@@ -12,7 +12,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/use-toast";
 import { Loader2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -27,15 +27,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-import { PlanCard } from "@/components/billing/plan-card";
+import { Check } from "lucide-react";
+
 import { CheckoutDialog } from "@/components/billing/checkout-dialog";
 
-import { useCurrentUser } from "@/hooks/use-auth";
+import { useCurrentUser } from "@/hooks/auth/use-auth";
 import {
   useCancelSubscription,
   usePlans,
   useSubscription,
-} from "@/hooks/use-billing";
+} from "@/hooks/billing/use-billing";
 import { format } from "@/lib/format";
 import { ApiError } from "@/lib/api/client";
 import type { PlanInfo } from "@/lib/api/types";
@@ -68,14 +69,17 @@ export default function BillingPage() {
   const handleCancel = async () => {
     try {
       await cancel.mutateAsync();
-      toast.success("Suscripción cancelada. Tu cuenta pasó al plan Gratuito.");
+      toast({
+        title: "Éxito",
+        description: "Suscripción cancelada. Tu cuenta pasó al plan Gratuito.",
+      });
       setConfirmCancel(false);
     } catch (err) {
       const message =
         err instanceof ApiError
           ? err.message
           : "No se pudo cancelar la suscripción";
-      toast.error(message);
+      toast({ title: "Error", description: message, variant: "destructive" });
     }
   };
 
@@ -170,52 +174,43 @@ export default function BillingPage() {
         )}
       </section>
 
-      {/* Plans grid */}
-      <section id="planes" className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold">Cambiar de plan</h2>
-          <p className="text-sm text-muted-foreground">
-            Sube a Pro para generar documentos ilimitados y eliminar la marca de
-            agua, o pasa a Institucional cuando necesites varios usuarios y
-            branding propio.
-          </p>
-        </div>
-        {plans.isLoading ? (
-          <div className="grid gap-6 md:grid-cols-3">
-            <Skeleton className="h-96" />
-            <Skeleton className="h-96" />
-            <Skeleton className="h-96" />
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-3">
-            {(plans.data?.plans ?? []).map((plan) => {
-              const isCurrent = plan.code === currentPlanCode;
-              const highlight = plan.code === "pro";
-              return (
-                <PlanCard
+      {/* Other plans — compact comparison, only shows plans the user
+          can actually switch to (the current plan is already in the
+          card above; the free plan is reachable via "Cancelar"). */}
+      {(() => {
+        const switchablePlans = (plans.data?.plans ?? []).filter(
+          (p) => p.code !== currentPlanCode && p.code !== "free"
+        );
+        if (plans.isLoading) {
+          return (
+            <section className="space-y-3">
+              <h2 className="text-lg font-semibold">Otros planes</h2>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Skeleton className="h-32" />
+                <Skeleton className="h-32" />
+              </div>
+            </section>
+          );
+        }
+        if (switchablePlans.length === 0) return null;
+        return (
+          <section id="planes" className="space-y-3">
+            <h2 className="text-lg font-semibold">Otros planes</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {switchablePlans.map((plan) => (
+                <CompactPlanCard
                   key={plan.code}
                   plan={plan}
-                  highlighted={highlight}
-                  badge={
-                    isCurrent
-                      ? "Plan actual"
-                      : highlight
-                      ? "Recomendado"
-                      : undefined
+                  isUpgrade={
+                    planRank(plan.code) > planRank(currentPlanCode)
                   }
-                  renderCta={(p) => (
-                    <BillingCta
-                      plan={p}
-                      isCurrent={isCurrent}
-                      onSelect={() => setSelectedPlan(p)}
-                    />
-                  )}
+                  onSelect={() => setSelectedPlan(plan)}
                 />
-              );
-            })}
-          </div>
-        )}
-      </section>
+              ))}
+            </div>
+          </section>
+        );
+      })()}
 
       <p className="text-center text-xs text-muted-foreground">
         ¿Necesitas factura electrónica o un plan personalizado para tu
@@ -319,32 +314,69 @@ function labelProvider(code: string): string {
   }
 }
 
-function BillingCta({
+// Plan hierarchy used to label a switch as "upgrade" vs "downgrade".
+function planRank(code: string): number {
+  switch (code.toLowerCase()) {
+    case "free":
+      return 0;
+    case "pro":
+      return 1;
+    case "institutional":
+      return 2;
+    default:
+      return -1;
+  }
+}
+
+function CompactPlanCard({
   plan,
-  isCurrent,
+  isUpgrade,
   onSelect,
 }: {
   plan: PlanInfo;
-  isCurrent: boolean;
+  isUpgrade: boolean;
   onSelect: () => void;
 }) {
-  if (isCurrent) {
-    return (
-      <Button disabled className="w-full" variant="outline">
-        Plan actual
-      </Button>
-    );
-  }
-  if (plan.code === "free") {
-    return (
-      <Button disabled className="w-full" variant="outline">
-        Disponible al cancelar tu plan
-      </Button>
-    );
-  }
+  // Pick the 3 most relevant features so the card stays compact.
+  const features = plan.features.slice(0, 3);
+
   return (
-    <Button className="w-full" onClick={onSelect}>
-      Pasar al plan {plan.name}
-    </Button>
+    <article className="flex flex-col gap-3 rounded-lg border bg-card p-4">
+      <header className="flex items-baseline justify-between gap-3">
+        <div>
+          <h3 className="text-base font-semibold">{plan.name}</h3>
+          <p className="text-xs text-muted-foreground">{plan.tagline}</p>
+        </div>
+        <p className="shrink-0 text-right">
+          <span className="text-lg font-semibold">
+            {format.cents(plan.price_cents)}
+          </span>
+          <span className="ml-1 text-xs text-muted-foreground">/mes</span>
+        </p>
+      </header>
+
+      {features.length > 0 && (
+        <ul className="space-y-1 text-xs text-muted-foreground">
+          {features.map((feat) => (
+            <li key={feat} className="flex items-start gap-2">
+              <Check
+                className="mt-0.5 h-3 w-3 shrink-0 text-primary"
+                aria-hidden
+              />
+              <span>{feat}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <Button
+        size="sm"
+        variant={isUpgrade ? "default" : "outline"}
+        className="mt-auto w-full"
+        onClick={onSelect}
+      >
+        {isUpgrade ? `Pasar al plan ${plan.name}` : `Cambiar a ${plan.name}`}
+      </Button>
+    </article>
   );
 }

@@ -3,12 +3,10 @@
 /**
  * DocuGob — Command palette (⌘K / Ctrl+K).
  *
- * TDR §7.2: "shadcn/ui blocks: dashboard con sidebar, command palette
- * (⌘K) para 'Nuevo oficio', 'Nuevo memorando'".
- *
- * The list of "Nuevo <tipo>" entries mirrors the 8 document types from
- * the backend catalog. Each one deep-links to the wizard preselected
- * with that type — the wizard page lands in Sprint 2 of the frontend.
+ * Sprint 8 — Fase 2: groups the "Crear documento" entries by category
+ * so 30 options stay scannable. Coming-soon types are hidden from
+ * the palette (the wizard surfaces them with a "Próximamente" badge,
+ * but in the palette they'd just be dead ends).
  */
 
 import { useEffect, useState } from "react";
@@ -23,26 +21,18 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import {
-  FileText,
   FilePlus,
   Files,
   CreditCard,
   Settings,
   Home,
+  FileText,
 } from "lucide-react";
 
-type DocTypeShortcut = { type: string; label: string };
-
-const DOC_TYPES: DocTypeShortcut[] = [
-  { type: "oficio_simple", label: "Nuevo oficio simple" },
-  { type: "oficio_multiple", label: "Nuevo oficio múltiple" },
-  { type: "memorando", label: "Nuevo memorando" },
-  { type: "informe_ordinario", label: "Nuevo informe ordinario" },
-  { type: "informe_tecnico", label: "Nuevo informe técnico" },
-  { type: "carta", label: "Nueva carta" },
-  { type: "constancia", label: "Nueva constancia" },
-  { type: "proveido", label: "Nuevo proveído" },
-];
+import {
+  DOCUMENT_CATEGORIES,
+  documentTypesByCategory,
+} from "@/lib/document-types";
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -65,23 +55,37 @@ export function CommandPalette() {
     router.push(href);
   };
 
+  const grouped = documentTypesByCategory();
+
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
       <CommandInput placeholder="Escribe un comando o búsqueda..." />
       <CommandList>
         <CommandEmpty>Sin resultados.</CommandEmpty>
 
-        <CommandGroup heading="Crear documento">
-          {DOC_TYPES.map((doc) => (
-            <CommandItem
-              key={doc.type}
-              onSelect={() => go(`/dashboard/documents/new?type=${doc.type}`)}
-            >
-              <FilePlus className="mr-2 h-4 w-4" />
-              {doc.label}
-            </CommandItem>
-          ))}
-        </CommandGroup>
+        {DOCUMENT_CATEGORIES.map((cat) => {
+          const specs = grouped[cat.code].filter((s) => !s.comingSoon);
+          if (specs.length === 0) return null;
+          return (
+            <CommandGroup key={cat.code} heading={`Crear · ${cat.label}`}>
+              {specs.map((doc) => {
+                const Icon = doc.icon;
+                return (
+                  <CommandItem
+                    key={doc.code}
+                    value={`crear ${doc.label} ${doc.description}`}
+                    onSelect={() =>
+                      go(`/dashboard/documents/new?type=${doc.code}`)
+                    }
+                  >
+                    <Icon className="mr-2 h-4 w-4" />
+                    {doc.label}
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          );
+        })}
 
         <CommandSeparator />
 
@@ -97,6 +101,10 @@ export function CommandPalette() {
           <CommandItem onSelect={() => go("/dashboard/templates")}>
             <FileText className="mr-2 h-4 w-4" />
             Plantillas
+          </CommandItem>
+          <CommandItem onSelect={() => go("/dashboard/documents/new")}>
+            <FilePlus className="mr-2 h-4 w-4" />
+            Asistente de creación
           </CommandItem>
           <CommandItem onSelect={() => go("/dashboard/billing")}>
             <CreditCard className="mr-2 h-4 w-4" />

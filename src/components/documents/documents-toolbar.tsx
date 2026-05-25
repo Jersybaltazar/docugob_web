@@ -5,13 +5,19 @@ import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { Search, X } from "lucide-react";
 import type { DocumentStatus, DocumentType } from "@/lib/api/types";
-import { DOCUMENT_STATUS_LABEL, DOCUMENT_TYPES } from "@/lib/document-types";
+import {
+  DOCUMENT_CATEGORIES,
+  DOCUMENT_STATUS_LABEL,
+  documentTypesByCategory,
+} from "@/lib/document-types";
 import { Button } from "@/components/ui/button";
 
 export type DocumentsToolbarValue = {
@@ -31,9 +37,15 @@ export function DocumentsToolbar({
   // API call per keystroke.
   const [search, setSearch] = useState(value.search);
 
-  useEffect(() => {
+  // Sync local state from the prop using React 19's "adjust state
+  // during render" pattern instead of a useEffect (which would trip
+  // the `set-state-in-effect` rule). See:
+  // https://react.dev/reference/react/useState#storing-information-from-previous-renders
+  const [lastPropSearch, setLastPropSearch] = useState(value.search);
+  if (value.search !== lastPropSearch) {
+    setLastPropSearch(value.search);
     setSearch(value.search);
-  }, [value.search]);
+  }
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -71,16 +83,25 @@ export function DocumentsToolbar({
             })
           }
         >
-          <SelectTrigger className="w-[180px]" aria-label="Filtrar por tipo">
+          <SelectTrigger className="w-[200px]" aria-label="Filtrar por tipo">
             <SelectValue placeholder="Tipo" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="max-h-[60vh]">
             <SelectItem value="all">Todos los tipos</SelectItem>
-            {DOCUMENT_TYPES.map((t) => (
-              <SelectItem key={t.code} value={t.code}>
-                {t.label}
-              </SelectItem>
-            ))}
+            {DOCUMENT_CATEGORIES.map((cat) => {
+              const specs = documentTypesByCategory()[cat.code];
+              if (!specs || specs.length === 0) return null;
+              return (
+                <SelectGroup key={cat.code}>
+                  <SelectLabel>{cat.label}</SelectLabel>
+                  {specs.map((t) => (
+                    <SelectItem key={t.code} value={t.code}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              );
+            })}
           </SelectContent>
         </Select>
 

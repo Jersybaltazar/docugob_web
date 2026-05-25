@@ -21,6 +21,7 @@ export type TenantBrief = {
   is_active: boolean;
 };
 
+
 export type UserWithTenant = {
   id: string;
   email: string;
@@ -36,15 +37,59 @@ export type UserWithTenant = {
 
 // ----- Documents -----
 
+/**
+ * 30 document types organized in 6 categories. The 8 originals from
+ * Sprint 4 (Hito 1 MVP) keep their codes; Sprint 8 added the rest.
+ * Stays in sync with the backend enum — adding a new code here that
+ * the backend doesn't know about results in 404s from the templates
+ * service, so flip `comingSoon` in `document-types.ts` to gate the UI
+ * until the backend ships the template.
+ */
 export type DocumentType =
+  // Comunicaciones
   | "oficio_simple"
   | "oficio_multiple"
+  | "oficio_circular"
+  | "carta"
+  | "carta_notarial"
+  | "nota_envio"
+  | "esquela"
+  // Internos
   | "memorando"
+  | "memorando_multiple"
+  | "memorando_circular"
+  | "proveido"
+  | "hoja_ruta"
+  // Informes
   | "informe_ordinario"
   | "informe_tecnico"
-  | "carta"
+  | "informe_legal"
+  | "informe_final"
+  | "informe_auditoria"
+  // Resoluciones
+  | "resolucion_directoral"
+  | "resolucion_jefatural"
+  | "resolucion_administrativa"
+  | "directiva"
+  | "disposicion"
+  // Solicitudes
+  | "solicitud_general"
+  | "solicitud_informacion"
+  | "solicitud_vacaciones"
+  | "solicitud_licencia"
+  // Actas y Constancias
+  | "acta_reunion"
+  | "acta_conformidad"
   | "constancia"
-  | "proveido";
+  | "certificado";
+
+export type DocumentCategory =
+  | "comunicaciones"
+  | "internos"
+  | "informes"
+  | "resoluciones"
+  | "solicitudes"
+  | "actas_constancias";
 
 export type DocumentStatus =
   | "draft"
