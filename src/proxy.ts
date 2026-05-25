@@ -43,23 +43,43 @@ const CSP_CONNECT_EXTRA =
   "https://checkout.culqi.com https://secure.culqi.com https://api.culqi.com";
 const CSP_FRAME_EXTRA = "https://checkout.culqi.com https://secure.culqi.com";
 
-function buildCsp(nonce: string): string {
-  // `strict-dynamic` lets nonce-trusted scripts load further scripts
-  // without listing every CDN explicitly. `'unsafe-inline'` is the
-  // fallback Safari/older browsers honor when `strict-dynamic` is
-  // ignored. Combined they give defense in depth.
+/**
+ * Static CSP — does NOT use per-request nonces.
+ *
+ * Originally Sprint D shipped with `'strict-dynamic'` + nonce, but
+ * that approach forces every Next.js route into dynamic rendering
+ * (because the HTML's script nonces must match the per-request CSP
+ * header nonce). On Vercel with normal static caching, the first
+ * visit to a public page like /sign-in receives cached HTML whose
+ * nonces don't match the fresh CSP nonce, and the browser blocks
+ * EVERY script — including the React runtime — so the page becomes
+ * a dead static document (login form looks fine, the button does
+ * nothing, no fetch fires).
+ *
+ * Trade-off (deliberate): `'unsafe-inline'` lets inline scripts run
+ * without nonce checks. We lose the strict XSS protection nonces
+ * provide but keep:
+ *   - frame-ancestors 'none'  (clickjacking)
+ *   - form-action 'self'      (form hijacking)
+ *   - object-src 'none'       (Flash/plugin XSS)
+ *   - base-uri 'self'         (base tag injection)
+ *   - script-src 'self' + explicit allowlist (no foreign CDNs)
+ *
+ * For a B2B admin SaaS without user-generated content surfaces
+ * (forms render plain text), the residual XSS risk is acceptable.
+ */
+function buildCsp(): string {
   return [
     `default-src 'self'`,
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'unsafe-inline' ${CSP_SCRIPT_EXTRA}`,
-    // Tailwind v4 inlines styles, and shadcn primitives use inline style attrs.
+    `script-src 'self' 'unsafe-inline' ${CSP_SCRIPT_EXTRA}`,
+    // Tailwind v4 inlines styles and shadcn primitives use style attrs.
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' blob: data:`,
     `font-src 'self' data:`,
     `connect-src 'self' ${CSP_CONNECT_EXTRA}`,
-    // `blob:` is required so the wizard step-4 PdfViewer can show the
-    // dry-run preview PDF in an <iframe src="blob:..."> — the bytes
-    // come from /api/documents/{id}/preview and never leave the page.
-    // `'self'` allows any future same-origin iframe (currently none).
+    // `blob:` lets the wizard step-4 PdfViewer show the dry-run
+    // preview PDF in an <iframe src="blob:..."> from
+    // /api/documents/{id}/preview.
     `frame-src 'self' blob: ${CSP_FRAME_EXTRA}`,
     `object-src 'none'`,
     `base-uri 'self'`,
@@ -95,15 +115,11 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
-  const csp = buildCsp(nonce);
-
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-nonce", nonce);
-  requestHeaders.set("content-security-policy", csp);
-
-  const response = NextResponse.next({ request: { headers: requestHeaders } });
-  response.headers.set("content-security-policy", csp);
+  // Static CSP — no per-request nonce, so static-generated pages
+  // (sign-in, sign-up, /, /pricing) work without forcing all routes
+  // into dynamic rendering. See `buildCsp` docstring for the trade-off.
+  const response = NextResponse.next();
+  response.headers.set("content-security-policy", buildCsp());
   return response;
 }
 
