@@ -22,10 +22,26 @@ export default function AuthLayout({
             del sector público peruano.
           </p>
         </div>
-        <p className="text-xs opacity-70">
-          © {new Date().getFullYear()} DocuGob · Plataforma SaaS para el sector
-          público peruano
-        </p>
+        <div className="space-y-2 text-xs opacity-70">
+          <p>
+            © {new Date().getFullYear()} DocuGob · Plataforma SaaS para el
+            sector público peruano
+          </p>
+          <p className="flex flex-wrap gap-x-3 gap-y-1">
+            <Link
+              href="/terminos"
+              className="underline-offset-4 hover:underline hover:opacity-100"
+            >
+              Términos
+            </Link>
+            <Link
+              href="/privacidad"
+              className="underline-offset-4 hover:underline hover:opacity-100"
+            >
+              Privacidad
+            </Link>
+          </p>
+        </div>
       </aside>
 
       {/* Right: form */}

@@ -37,6 +37,22 @@ export const signInSchema = z.object({
 });
 export type SignInValues = z.infer<typeof signInSchema>;
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Correo electrónico inválido"),
+});
+export type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z
+  .object({
+    password: passwordSchema,
+    password_confirm: z.string().min(1, "Confirma tu contraseña"),
+  })
+  .refine((d) => d.password === d.password_confirm, {
+    path: ["password_confirm"],
+    message: "Las contraseñas no coinciden",
+  });
+export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;
+
 export const signUpSchema = z.object({
   full_name: z
     .string()
@@ -48,5 +64,13 @@ export const signUpSchema = z.object({
     .max(NAME_MAX_LENGTH, "Demasiado largo"),
   email: z.string().email("Correo electrónico inválido"),
   password: passwordSchema,
+  // Ley 29733 art. 18: el tratamiento de datos requiere consentimiento
+  // explícito. El checkbox cubre tanto los T&C como la política de
+  // privacidad — ambos están enlazados en el label del checkbox.
+  accept_terms: z
+    .boolean()
+    .refine((v) => v === true, {
+      message: "Debes aceptar los términos y la política de privacidad",
+    }),
 });
 export type SignUpValues = z.infer<typeof signUpSchema>;

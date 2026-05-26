@@ -21,16 +21,28 @@ export function useSignUpForm() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { full_name: "", tenant_name: "", email: "", password: "" },
+    defaultValues: {
+      full_name: "",
+      tenant_name: "",
+      email: "",
+      password: "",
+      accept_terms: false,
+    },
     mode: "onChange",
   });
 
   const onHandleSubmit = handleSubmit(async (values) => {
     try {
-      await register_.mutateAsync(values);
+      // Strip the consent flag — the backend doesn't need it (it's a
+      // client-side gate). The acceptance is implicit by the act of
+      // submitting the form after the checkbox was required.
+      const { accept_terms: _accept_terms, ...payload } = values;
+      void _accept_terms;
+      await register_.mutateAsync(payload);
       toast({
         title: "Éxito",
         description: "Cuenta creada — bienvenido a DocuGob",
@@ -44,6 +56,7 @@ export function useSignUpForm() {
 
   return {
     register,
+    control,
     errors,
     onHandleSubmit,
     loading: isSubmitting || register_.isPending,

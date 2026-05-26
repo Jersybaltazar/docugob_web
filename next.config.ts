@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 /**
  * DocuGob web — Next.js config.
@@ -50,4 +51,27 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Wrap with Sentry only in production builds. The wrapper reprocesses
+// the module graph on every HMR to inject tracing/source-map metadata,
+// which is wasted work in dev — and it noticeably slows down save →
+// reload cycles in Turbopack. The runtime SDK still initializes in
+// dev via `instrumentation.ts` / `instrumentation-client.ts` so you
+// can still test error capture locally.
+const isSentryEnabled = Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN);
+const isProductionBuild = process.env.NODE_ENV === "production";
+
+export default isSentryEnabled && isProductionBuild
+  ? withSentryConfig(nextConfig, {
+      // Source maps upload — only happens when SENTRY_AUTH_TOKEN is
+      // set in the build environment (CI / Vercel). Without it, the
+      // wrapper still injects the SDK but skips the upload step.
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      silent: !process.env.CI,
+      // Don't try to widen Vercel's response with a `/monitoring`
+      // tunnel route — keeps the proxy.ts behavior intact.
+      tunnelRoute: undefined,
+      disableLogger: true,
+    })
+  : nextConfig;

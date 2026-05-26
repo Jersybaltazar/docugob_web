@@ -10,6 +10,7 @@ import { api } from "./client";
 import type { UserWithTenant } from "./types";
 
 type LoggedInAck = { logged_in: boolean };
+type AuthAck = { ok: boolean };
 
 export const authApi = {
   register(params: {
@@ -31,5 +32,24 @@ export const authApi = {
 
   me(): Promise<UserWithTenant> {
     return api.get<UserWithTenant>("/auth/me");
+  },
+
+  requestPasswordReset(params: { email: string }): Promise<AuthAck> {
+    return api.post<AuthAck>("/auth/password-reset/request", params);
+  },
+
+  confirmPasswordReset(params: {
+    token: string;
+    password: string;
+  }): Promise<AuthAck> {
+    return api.post<AuthAck>("/auth/password-reset/confirm", params);
+  },
+
+  confirmEmailVerification(params: { token: string }): Promise<AuthAck> {
+    return api.post<AuthAck>("/auth/verify-email/confirm", params);
+  },
+
+  resendEmailVerification(): Promise<AuthAck> {
+    return api.post<AuthAck>("/auth/verify-email/resend");
   },
 };

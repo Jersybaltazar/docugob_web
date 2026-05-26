@@ -15,6 +15,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { CommandPalette } from "@/components/layout/command-palette";
+import { VerifyEmailBanner } from "@/components/layout/verify-email-banner";
 import type { UserWithTenant } from "@/lib/api/types";
 
 export function DashboardShell({
@@ -41,6 +42,7 @@ export function DashboardShell({
           tabIndex={-1}
           className="flex-1 px-6 py-6 lg:px-8 focus:outline-none"
         >
+          <VerifyEmailBanner />
           {children}
         </main>
       </SidebarInset>

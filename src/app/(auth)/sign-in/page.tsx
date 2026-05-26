@@ -38,9 +38,8 @@ export default function SignInPage() {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="sr-only" id="password-aux" />
-            {/* Reset link placeholder — real flow lands in Sprint 9 */}
             <Link
-              href="#"
+              href="/forgot-password"
               className="ml-auto text-xs text-muted-foreground hover:text-foreground"
               tabIndex={-1}
             >
@@ -48,10 +47,9 @@ export default function SignInPage() {
             </Link>
           </div>
           <FormGenerator<SignInValues>
-            inputType="input"
+            inputType="password"
             name="password"
             label="Contraseña"
-            type="password"
             autoComplete="current-password"
             register={register}
             errors={errors}

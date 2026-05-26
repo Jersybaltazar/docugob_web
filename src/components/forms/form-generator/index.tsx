@@ -32,6 +32,7 @@ import type {
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -62,6 +63,10 @@ type InputProps<T extends FieldValues> = CommonProps<T> & {
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
 };
 
+type PasswordProps<T extends FieldValues> = CommonProps<T> & {
+  inputType: "password";
+};
+
 type TextareaProps<T extends FieldValues> = CommonProps<T> & {
   inputType: "textarea";
   rows?: number;
@@ -74,6 +79,7 @@ type SelectProps<T extends FieldValues> = CommonProps<T> & {
 
 type FormGeneratorProps<T extends FieldValues> =
   | InputProps<T>
+  | PasswordProps<T>
   | TextareaProps<T>
   | SelectProps<T>;
 
@@ -125,6 +131,18 @@ export function FormGenerator<T extends FieldValues>(
           id={fieldId}
           type={props.type ?? "text"}
           inputMode={props.inputMode}
+          placeholder={placeholder}
+          autoComplete={autoComplete}
+          autoFocus={autoFocus}
+          aria-invalid={Boolean(error)}
+          aria-describedby={describedBy}
+          {...register(name)}
+        />
+      )}
+
+      {props.inputType === "password" && (
+        <PasswordInput
+          id={fieldId}
           placeholder={placeholder}
           autoComplete={autoComplete}
           autoFocus={autoFocus}

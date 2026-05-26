@@ -1,14 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { Controller } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { FormGenerator } from "@/components/forms/form-generator";
 import { useSignUpForm } from "@/hooks/auth/use-sign-up";
 import type { SignUpValues } from "@/schemas/auth.schema";
 
 export default function SignUpPage() {
-  const { register, errors, onHandleSubmit, loading } = useSignUpForm();
+  const { register, control, errors, onHandleSubmit, loading } =
+    useSignUpForm();
 
   return (
     <div className="space-y-6">
@@ -56,15 +60,60 @@ export default function SignUpPage() {
         />
 
         <FormGenerator<SignUpValues>
-          inputType="input"
+          inputType="password"
           name="password"
           label="Contraseña"
-          type="password"
           autoComplete="new-password"
           description="Mínimo 8 caracteres con mayúscula, minúscula, dígito y símbolo."
           register={register}
           errors={errors}
         />
+
+        <div className="space-y-2">
+          <div className="flex items-start gap-2">
+            <Controller
+              control={control}
+              name="accept_terms"
+              render={({ field }) => (
+                <Checkbox
+                  id="accept_terms"
+                  checked={field.value}
+                  onCheckedChange={(checked) => field.onChange(checked === true)}
+                  onBlur={field.onBlur}
+                  aria-invalid={Boolean(errors.accept_terms)}
+                  className="mt-0.5"
+                />
+              )}
+            />
+            <Label
+              htmlFor="accept_terms"
+              className="text-sm font-normal leading-snug text-muted-foreground"
+            >
+              He leído y acepto los{" "}
+              <Link
+                href="/terminos"
+                target="_blank"
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+              >
+                Términos y condiciones
+              </Link>{" "}
+              y la{" "}
+              <Link
+                href="/privacidad"
+                target="_blank"
+                className="font-medium text-foreground underline-offset-4 hover:underline"
+              >
+                Política de privacidad
+              </Link>
+              .
+            </Label>
+          </div>
+          {errors.accept_terms && (
+            <p role="alert" className="text-sm text-destructive">
+              {errors.accept_terms.message}
+            </p>
+          )}
+        </div>
 
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Creando cuenta..." : "Crear cuenta gratuita"}

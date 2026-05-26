@@ -69,6 +69,38 @@ export function useRegister() {
   });
 }
 
+export function useRequestPasswordReset() {
+  return useMutation({
+    mutationFn: (params: { email: string }) =>
+      authApi.requestPasswordReset(params),
+  });
+}
+
+export function useConfirmPasswordReset() {
+  return useMutation({
+    mutationFn: (params: { token: string; password: string }) =>
+      authApi.confirmPasswordReset(params),
+  });
+}
+
+export function useConfirmEmailVerification() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { token: string }) =>
+      authApi.confirmEmailVerification(params),
+    onSuccess: () => {
+      // Re-fetch the current user so `is_verified` flips in the UI.
+      queryClient.invalidateQueries({ queryKey: USER_QUERY_KEY });
+    },
+  });
+}
+
+export function useResendEmailVerification() {
+  return useMutation({
+    mutationFn: () => authApi.resendEmailVerification(),
+  });
+}
+
 export function useLogout() {
   const queryClient = useQueryClient();
   const router = useRouter();

@@ -4,7 +4,6 @@ import {
   BadgeCheck,
   Check,
   Eye,
-  FileText,
   ImageIcon,
   Layers,
   ShieldCheck,
@@ -16,6 +15,8 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { SiteHeader } from "@/components/marketing/site-header";
+import { SiteFooter } from "@/components/marketing/site-footer";
 import { DOCUMENT_CATEGORIES } from "@/lib/document-types";
 
 /**
@@ -59,109 +60,6 @@ export default function HomePage() {
 
       <SiteFooter />
     </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Header / Footer
-// ---------------------------------------------------------------------------
-
-function SiteHeader() {
-  return (
-    <header className="sticky top-0 z-30 border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        <Link href="/" className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-          <span className="grid h-7 w-7 place-items-center rounded-md bg-primary text-primary-foreground">
-            <FileText className="h-4 w-4" />
-          </span>
-          DocuGob
-        </Link>
-        <nav
-          aria-label="Navegación principal"
-          className="hidden items-center gap-1 sm:flex"
-        >
-          <Button asChild variant="ghost" size="sm">
-            <Link href="#caracteristicas">Características</Link>
-          </Button>
-          <Button asChild variant="ghost" size="sm">
-            <Link href="#documentos">Documentos</Link>
-          </Button>
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/pricing">Planes</Link>
-          </Button>
-        </nav>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/sign-in">Iniciar sesión</Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link href="/sign-up">Crear cuenta gratis</Link>
-          </Button>
-        </div>
-      </div>
-    </header>
-  );
-}
-
-function SiteFooter() {
-  return (
-    <footer className="border-t">
-      <div className="mx-auto max-w-6xl px-6 py-10">
-        <div className="grid gap-8 sm:grid-cols-[2fr_1fr_1fr]">
-          <div>
-            <p className="text-base font-semibold">DocuGob</p>
-            <p className="mt-2 max-w-md text-sm text-muted-foreground">
-              Automatización de documentos administrativos para el sector
-              público peruano. Conforme al TUO de la Ley N° 27444 del
-              Procedimiento Administrativo General.
-            </p>
-          </div>
-          <FooterColumn
-            title="Producto"
-            links={[
-              { href: "/pricing", label: "Planes y precios" },
-              { href: "#documentos", label: "Tipos de documento" },
-              { href: "#como-funciona", label: "Cómo funciona" },
-              { href: "#personalizacion", label: "Plantillas con tu membrete" },
-            ]}
-          />
-          <FooterColumn
-            title="Cuenta"
-            links={[
-              { href: "/sign-in", label: "Iniciar sesión" },
-              { href: "/sign-up", label: "Crear cuenta gratis" },
-            ]}
-          />
-        </div>
-        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t pt-6 text-xs text-muted-foreground">
-          <p>© {new Date().getFullYear()} DocuGob</p>
-          <p>Hecho en Perú · Ley N° 27444 · Ley N° 29733 (Datos Personales)</p>
-        </div>
-      </div>
-    </footer>
-  );
-}
-
-function FooterColumn({
-  title,
-  links,
-}: {
-  title: string;
-  links: { href: string; label: string }[];
-}) {
-  return (
-    <nav aria-label={title}>
-      <p className="text-sm font-semibold">{title}</p>
-      <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-        {links.map((l) => (
-          <li key={l.href}>
-            <Link href={l.href} className="hover:text-foreground">
-              {l.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </nav>
   );
 }
 
