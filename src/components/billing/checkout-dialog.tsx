@@ -129,6 +129,10 @@ export function CheckoutDialog({
             payerEmail={user?.email ?? ""}
             onToken={handleSubscribe}
             disabled={subscribe.isPending}
+            // Close THIS dialog before Culqi opens its own modal —
+            // Radix's focus trap and `pointer-events: none` overlay
+            // would freeze every input inside the Culqi widget.
+            onBeforeOpen={() => onOpenChange(false)}
           />
         )}
 
@@ -227,12 +231,16 @@ function CulqiForm({
   payerEmail,
   onToken,
   disabled,
+  onBeforeOpen,
 }: {
   plan: PlanInfo | null;
   publicKey: string;
   payerEmail: string;
   onToken: (token: string) => void;
   disabled: boolean;
+  /** Called right before Culqi.open() — used to release the parent
+   *  Radix Dialog so its focus trap doesn't freeze Culqi's inputs. */
+  onBeforeOpen: () => void;
 }) {
   const [loading, setLoading] = useState(false);
 
@@ -265,6 +273,21 @@ function CulqiForm({
         installments: false,
         paymentMethods: { tarjeta: true, yape: false, billetera: false, bancaMovil: false, agente: false, cuotealo: false },
         customerEmail: payerEmail || "",
+        // Partial branding supported by Culqi Checkout V4. Hex values
+        // approximate the DocuGob `--primary` institutional blue
+        // token from `globals.css`. Layout/typography are NOT
+        // customizable in V4 — full theming would require building a
+        // custom form with Culqi.js (not Checkout) + PCI compliance.
+        style: {
+          logo: "",
+          bannerColor: "#1F3D7A",
+          buttonBackground: "#1F3D7A",
+          menuColor: "#FFFFFF",
+          linksColor: "#1F3D7A",
+          buttonText: "Pagar suscripción",
+          buttonTextColor: "#FFFFFF",
+          priceColor: "#1F3D7A",
+        },
       });
 
       // Culqi calls a globally named function `culqi` after a successful
@@ -289,6 +312,13 @@ function CulqiForm({
         }
       };
 
+      // Step 1: close OUR Radix Dialog so its focus trap releases.
+      onBeforeOpen();
+      // Step 2: give Radix one animation frame to detach overlays.
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve())
+      );
+      // Step 3: open Culqi cleanly on a free document body.
       Culqi.open();
     } catch (err) {
       toast({

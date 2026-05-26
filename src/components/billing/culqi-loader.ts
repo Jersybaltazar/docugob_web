@@ -9,7 +9,12 @@
  * paint.
  */
 
-const CULQI_SRC = "https://js.culqi.com/checkout-js";
+// Culqi Checkout V4 — current official URL.
+// Docs: https://docs.culqi.com/docs/integraciones-checkout-v4
+// The previous `https://js.culqi.com/checkout-js` URL was an older
+// alias that no longer exposes `window.Culqi` correctly with v4
+// payloads, surfacing as "Culqi.js no se pudo inicializar" at click time.
+const CULQI_SRC = "https://checkout.culqi.com/js/v4";
 
 declare global {
   interface Window {
