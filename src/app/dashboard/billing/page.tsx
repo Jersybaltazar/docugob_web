@@ -149,8 +149,9 @@ export default function BillingPage() {
               {isCancelled && (
                 <p className="rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2 text-sm text-amber-900">
                   Tu suscripción está cancelada. Estás en el plan Gratuito —
-                  hasta 5 documentos al mes con marca de agua. Suscríbete de
-                  nuevo para recuperar el acceso ilimitado.
+                  hasta 30 documentos al mes (los primeros 10 sin marca de
+                  agua). Suscríbete de nuevo para recuperar el acceso
+                  ilimitado y sin marca.
                 </p>
               )}
             </div>
@@ -236,9 +237,10 @@ export default function BillingPage() {
           <DialogHeader>
             <DialogTitle>Cancelar suscripción</DialogTitle>
             <DialogDescription>
-              Tu cuenta pasará inmediatamente al plan Gratuito: hasta 5
-              documentos al mes y marca de agua. Los documentos generados se
-              conservan.
+              Tu cuenta pasará inmediatamente al plan Gratuito: hasta 30
+              documentos al mes (los primeros 10 sin marca de agua, los
+              siguientes 20 con marca DocuGob). Los documentos que ya
+              generaste se conservan.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">

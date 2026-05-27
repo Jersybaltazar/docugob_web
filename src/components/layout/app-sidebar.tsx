@@ -18,6 +18,7 @@ import {
   Settings,
   CreditCard,
   Files,
+  Users,
 } from "lucide-react";
 
 import {
@@ -40,6 +41,7 @@ const NAV_ITEMS = [
 ];
 
 const ACCOUNT_ITEMS = [
+  { href: "/dashboard/settings/team", label: "Equipo", icon: Users },
   { href: "/dashboard/billing", label: "Plan y facturación", icon: CreditCard },
   { href: "/dashboard/settings", label: "Configuración", icon: Settings },
 ];

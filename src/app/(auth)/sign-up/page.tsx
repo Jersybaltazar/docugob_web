@@ -5,7 +5,6 @@ import { Controller } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { FormGenerator } from "@/components/forms/form-generator";
 import { useSignUpForm } from "@/hooks/auth/use-sign-up";
 import type { SignUpValues } from "@/schemas/auth.schema";
@@ -21,7 +20,7 @@ export default function SignUpPage() {
           Crea tu cuenta gratuita
         </h1>
         <p className="text-sm text-muted-foreground">
-          Hasta 5 documentos al mes sin tarjeta de crédito
+          Hasta 30 documentos al mes sin tarjeta de crédito
         </p>
       </div>
 
@@ -85,9 +84,13 @@ export default function SignUpPage() {
                 />
               )}
             />
-            <Label
+            {/* Plain <label> instead of shadcn's <Label> — the latter
+                applies `flex items-center gap-2`, which turns every
+                child (including the inline <Link>s) into a separate
+                flex column, fragmenting the sentence. */}
+            <label
               htmlFor="accept_terms"
-              className="text-sm font-normal leading-snug text-muted-foreground"
+              className="select-none text-sm leading-snug text-muted-foreground"
             >
               He leído y acepto los{" "}
               <Link
@@ -106,7 +109,7 @@ export default function SignUpPage() {
                 Política de privacidad
               </Link>
               .
-            </Label>
+            </label>
           </div>
           {errors.accept_terms && (
             <p role="alert" className="text-sm text-destructive">

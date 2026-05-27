@@ -241,6 +241,41 @@ export type SubscriptionRead = {
   cancel_at: string | null;
 };
 
+// ----- Team / Invitations -----
+
+export type TenantRole = "owner" | "admin" | "editor" | "viewer";
+
+export type TeamMember = {
+  user_id: string;
+  email: string;
+  full_name: string;
+  role: TenantRole | string;
+  area: string | null;
+  is_owner: boolean;
+  is_current_user: boolean;
+  joined_at: string;
+};
+
+export type Invitation = {
+  id: string;
+  email: string;
+  role: TenantRole | string;
+  area: string | null;
+  invited_by: string | null;
+  expires_at: string;
+  accepted_at: string | null;
+  created_at: string;
+};
+
+export type InvitationPreview = {
+  tenant_name: string;
+  email: string;
+  role: TenantRole | string;
+  inviter_name: string | null;
+  expires_at: string;
+  requires_login: boolean;
+};
+
 // ----- Pagination -----
 
 export type PaginatedResponse<T> = {

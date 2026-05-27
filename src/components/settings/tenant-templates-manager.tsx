@@ -23,6 +23,7 @@ import {
   FileText,
   Info,
   Loader2,
+  MoreHorizontal,
   Pencil,
   Trash2,
   Upload,
@@ -45,6 +46,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { UploadTemplateDialog } from "./upload-template-dialog";
 import {
@@ -183,65 +191,74 @@ function TemplateCard({
 
   return (
     <Card>
-      <CardContent className="flex flex-wrap items-start gap-4 py-4">
+      <CardContent className="flex items-start gap-3 py-3">
         <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
           <Icon className="h-5 w-5" aria-hidden />
         </span>
 
         <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate font-medium" title={template.name}>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="truncate text-sm font-medium" title={template.name}>
               {template.name}
             </p>
-            <Badge variant="outline" className="text-[10px]">
-              {docType?.label ?? template.document_type}
-            </Badge>
             {template.is_active ? (
-              <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50 dark:bg-emerald-500/10 dark:text-emerald-300">
+              <Badge className="bg-emerald-50 text-[10px] text-emerald-700 hover:bg-emerald-50 dark:bg-emerald-500/10 dark:text-emerald-300">
                 Activa
               </Badge>
             ) : (
-              <Badge variant="secondary">Inactiva</Badge>
+              <Badge variant="secondary" className="text-[10px]">
+                Inactiva
+              </Badge>
             )}
           </div>
-          {template.description && (
-            <p className="line-clamp-2 text-sm text-muted-foreground">
-              {template.description}
-            </p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            Versión {template.version}
+          <p className="truncate text-xs text-muted-foreground">
+            {docType?.label ?? template.document_type} · v{template.version}
+            {template.description ? ` · ${template.description}` : ""}
           </p>
         </div>
 
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDownload}
-            disabled={downloading}
-          >
-            {downloading ? (
-              <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Download className="mr-1 h-3.5 w-3.5" />
-            )}
-            Descargar
-          </Button>
+        {/* Primary action stays visible (most-used). Secondary actions
+            collapse into a single overflow menu so the card row stays
+            tight even on narrow viewports. */}
+        <div className="flex shrink-0 items-center gap-1">
           <Button variant="outline" size="sm" onClick={onReplace}>
             <Pencil className="mr-1 h-3.5 w-3.5" />
             Reemplazar
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setConfirmDelete(true)}
-            className="text-destructive hover:text-destructive"
-            disabled={del.isPending}
-          >
-            <Trash2 className="mr-1 h-3.5 w-3.5" />
-            Eliminar
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                aria-label="Más acciones"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem
+                onClick={handleDownload}
+                disabled={downloading}
+              >
+                {downloading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                Descargar
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setConfirmDelete(true)}
+                disabled={del.isPending}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </CardContent>
 

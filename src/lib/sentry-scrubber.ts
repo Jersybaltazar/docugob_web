@@ -10,6 +10,39 @@
 
 import type { ErrorEvent } from "@sentry/nextjs";
 
+/**
+ * Patterns that mark dev / build-tooling noise we never want in Sentry:
+ *  - Turbopack chunk lifecycle errors during HMR.
+ *  - Next.js dynamic import failures after a stale chunk.
+ *  - Browser-extension crashes (we're not the cause and can't fix them).
+ *  - User-cancelled navigation / aborted fetches.
+ *
+ * Sentry matches each entry against the exception value (string) or as
+ * a RegExp; we mix both. Passed to `Sentry.init({ ignoreErrors })` in
+ * every runtime config.
+ */
+export const IGNORE_ERRORS: (string | RegExp)[] = [
+  // Turbopack / Webpack chunk lifecycle during HMR.
+  /module factory is not available/i,
+  /ChunkLoadError/i,
+  /Loading chunk [\d]+ failed/i,
+  /Loading CSS chunk/i,
+  /Failed to fetch dynamically imported module/i,
+  // The Next.js router throws this when navigation is interrupted by
+  // another navigation — not a real bug.
+  "NEXT_REDIRECT",
+  "NEXT_NOT_FOUND",
+  // Aborted fetch / user-cancelled requests.
+  "AbortError: The user aborted a request",
+  "TypeError: cancelled",
+  /^cancelled$/i,
+  // Browser extensions injecting code that crashes.
+  /chrome-extension:\/\//i,
+  /moz-extension:\/\//i,
+  "ResizeObserver loop limit exceeded",
+  "ResizeObserver loop completed with undelivered notifications",
+];
+
 const SENSITIVE_KEYS = new Set([
   "password",
   "new_password",

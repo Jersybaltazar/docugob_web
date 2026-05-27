@@ -8,7 +8,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 
-import { beforeSend } from "@/lib/sentry-scrubber";
+import { IGNORE_ERRORS, beforeSend } from "@/lib/sentry-scrubber";
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -29,6 +29,7 @@ if (dsn) {
     // include keystrokes by default unless you mask everything.
     replaysSessionSampleRate: 0,
     replaysOnErrorSampleRate: 0,
+    ignoreErrors: IGNORE_ERRORS,
     beforeSend,
   });
 }

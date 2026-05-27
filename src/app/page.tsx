@@ -102,7 +102,7 @@ function HeroSection() {
           </Button>
         </div>
         <p className="mt-6 text-xs text-muted-foreground">
-          5 documentos al mes gratis · sin tarjeta de crédito · cancela cuando
+          30 documentos al mes gratis · sin tarjeta de crédito · cancela cuando
           quieras
         </p>
       </div>
@@ -532,7 +532,7 @@ function PricingTeaserSection() {
       </p>
 
       <ul className="mx-auto mt-8 grid max-w-2xl gap-3 text-left sm:grid-cols-2">
-        <Bullet>5 documentos al mes en el plan Gratuito</Bullet>
+        <Bullet>30 documentos al mes en el plan Gratuito</Bullet>
         <Bullet>Documentos ilimitados desde S/19.90/mes</Bullet>
         <Bullet>Sin marca de agua desde Pro</Bullet>
         <Bullet>Plantillas con tu membrete en Institucional</Bullet>

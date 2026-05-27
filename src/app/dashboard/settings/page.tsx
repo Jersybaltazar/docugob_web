@@ -23,6 +23,7 @@ import {
   Mail,
   ShieldCheck,
   User,
+  Users,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -149,6 +150,13 @@ export default function SettingsPage() {
           description="Sube tus archivos .docx con tu propio membrete y pie de página. Reemplazan a las plantillas del sistema mientras estén activas."
           href="/dashboard/settings/templates"
           cta="Administrar"
+        />
+        <LinkRow
+          icon={<Users className="h-4 w-4" />}
+          title="Equipo"
+          description="Invita usuarios a tu entidad para que generen documentos juntos. Disponible en el plan Institucional."
+          href="/dashboard/settings/team"
+          cta="Gestionar equipo"
         />
       </Section>
 

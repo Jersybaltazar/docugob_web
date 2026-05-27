@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronRight, Search, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronRight, Search, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,9 +30,14 @@ import { ActiveTemplateBadge } from "./active-template-badge";
 export function StepType() {
   const { documentType, setDocumentType, next } = useWizard();
   const [query, setQuery] = useState("");
+  // Categories the user has explicitly toggled. We start empty so the
+  // page opens compact; the user picks the category they want and
+  // only that one expands. Active search overrides this — see below.
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
 
   const grouped = useMemo(() => documentTypesByCategory(), []);
   const queryNorm = query.trim().toLowerCase();
+  const isSearching = queryNorm.length > 0;
 
   const filtered = useMemo(() => {
     if (!queryNorm) return grouped;
@@ -54,10 +59,20 @@ export function StepType() {
     setDocumentType(spec.code as DocumentType);
   };
 
+  const toggleCategory = (code: string) => {
+    setExpanded((prev) => {
+      const out = new Set(prev);
+      if (out.has(code)) out.delete(code);
+      else out.add(code);
+      return out;
+    });
+  };
+
   const totalVisible = Object.values(filtered).reduce(
     (n, list) => n + list.length,
     0
   );
+  const totalAll = Object.values(grouped).flat().length;
 
   return (
     <section className="space-y-6">
@@ -66,7 +81,8 @@ export function StepType() {
           ¿Qué tipo de documento crearás?
         </h2>
         <p className="text-sm text-muted-foreground">
-          30 plantillas conformes a la Ley N° 27444, organizadas por uso.
+          {totalAll} plantillas conformes a la Ley N° 27444, organizadas
+          por uso. Toca una categoría para ver sus plantillas.
         </p>
       </header>
 
@@ -94,41 +110,89 @@ export function StepType() {
         </div>
       )}
 
-      {/* Category sections */}
-      <div role="radiogroup" aria-label="Tipo de documento" className="space-y-8">
+      {/* Category accordions */}
+      <div role="radiogroup" aria-label="Tipo de documento" className="space-y-2">
         {DOCUMENT_CATEGORIES.map((cat) => {
           const specs = filtered[cat.code];
           if (!specs || specs.length === 0) return null;
           const CategoryIcon = cat.icon;
+          // While searching, force every matching category open so
+          // results are visible without extra clicks.
+          const isOpen = isSearching || expanded.has(cat.code);
+          // Highlight the category that contains the currently-selected type.
+          const containsSelected = specs.some((s) => s.code === documentType);
+
           return (
-            <section key={cat.code} className="space-y-3">
-              <header className="flex items-center gap-2">
-                <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <CategoryIcon className="h-3.5 w-3.5" />
+            <div
+              key={cat.code}
+              className={cn(
+                "rounded-lg border bg-card transition-colors",
+                containsSelected && "border-primary/40 bg-primary/[0.03]"
+              )}
+            >
+              <button
+                type="button"
+                onClick={() => !isSearching && toggleCategory(cat.code)}
+                aria-expanded={isOpen}
+                aria-controls={`cat-${cat.code}`}
+                disabled={isSearching}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left transition-colors",
+                  !isSearching && "hover:bg-muted/40",
+                  isSearching && "cursor-default"
+                )}
+              >
+                <span
+                  className={cn(
+                    "inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors",
+                    isOpen || containsSelected
+                      ? "bg-primary/15 text-primary"
+                      : "bg-primary/10 text-primary"
+                  )}
+                >
+                  <CategoryIcon className="h-4 w-4" />
                 </span>
-                <h3 className="text-sm font-semibold tracking-tight">
-                  {cat.label}
-                </h3>
-                <span className="text-xs text-muted-foreground">
-                  ({specs.length})
-                </span>
-              </header>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {specs.map((doc) => (
-                  <TypeCard
-                    key={doc.code}
-                    spec={doc}
-                    selected={documentType === doc.code}
-                    onSelect={() => handleSelect(doc)}
-                    onDoubleSelect={() => {
-                      if (doc.comingSoon) return;
-                      handleSelect(doc);
-                      next();
-                    }}
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-semibold tracking-tight">
+                    {cat.label}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {specs.length} {specs.length === 1 ? "plantilla" : "plantillas"}
+                    {containsSelected && " · 1 seleccionada"}
+                  </p>
+                </div>
+                {!isSearching && (
+                  <ChevronDown
+                    aria-hidden
+                    className={cn(
+                      "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                      isOpen && "rotate-180"
+                    )}
                   />
-                ))}
-              </div>
-            </section>
+                )}
+              </button>
+
+              {isOpen && (
+                <div
+                  id={`cat-${cat.code}`}
+                  className="grid gap-3 border-t bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-3"
+                >
+                  {specs.map((doc) => (
+                    <TypeCard
+                      key={doc.code}
+                      spec={doc}
+                      selected={documentType === doc.code}
+                      onSelect={() => handleSelect(doc)}
+                      onDoubleSelect={() => {
+                        if (doc.comingSoon) return;
+                        handleSelect(doc);
+                        next();
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
@@ -139,8 +203,9 @@ export function StepType() {
 
       <footer className="flex items-center justify-between gap-2 pt-2">
         <p className="text-xs text-muted-foreground">
-          {totalVisible} de {Object.values(grouped).flat().length} plantillas
-          {queryNorm && ` coinciden con “${query}”`}
+          {isSearching
+            ? `${totalVisible} de ${totalAll} plantillas coinciden con “${query}”`
+            : `${totalAll} plantillas disponibles`}
         </p>
         <Button type="button" size="lg" onClick={next} disabled={!documentType}>
           Continuar

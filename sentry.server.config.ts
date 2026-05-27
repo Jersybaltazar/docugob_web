@@ -8,7 +8,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 
-import { beforeSend } from "@/lib/sentry-scrubber";
+import { IGNORE_ERRORS, beforeSend } from "@/lib/sentry-scrubber";
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
@@ -25,6 +25,7 @@ if (dsn) {
     tracesSampleRate: Number(
       process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE ?? 0,
     ),
+    ignoreErrors: IGNORE_ERRORS,
     beforeSend,
   });
 }
